@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>출발시간 추천 서비스 - 웹 디자인</title>
+
+<!--
+  ▼ TMAP API 연동 (SK Open API)
+  1) https://openapi.sk.com 에서 회원가입 후 애플리케이션 등록 → TMAP 상품(대중교통, 칸 혼잡도 등) 추가 → appKey 발급
+  2) 아래 YOUR_TMAP_APP_KEY 를 발급받은 appKey로 교체
+  3) 대중교통 요약정보 / 칸 혼잡도 API는 appKey가 브라우저에 노출되면 안 되므로, 실제 서비스에서는
+     Spring Boot 백엔드가 대신 호출하고 프론트는 우리 서버 API만 부르는 구조로 가야 합니다.
+     (지도 표시용 SDK 스크립트 자체는 프론트에서 직접 로드해도 됩니다.)
+  4) 이 파일을 웹 서버(또는 localhost)로 열면 실제 지도가 표시됩니다.
+     (Claude 미리보기 화면은 등록 가능한 도메인이 아니라서 계속 목업 지도로 보여요.)
+-->
+<script
+  src="https://apis.openapi.sk.com/tmap/jsv2?version=1&format=javascript&appKey=YOUR_TMAP_APP_KEY"
+  onload="initTmap()"
+  onerror="handleTmapScriptError()"></script>
+
+<style>
+  :root{
+    --navy:#1B1F3B;
+    --navy-soft:#242A52;
+    --teal:#2D6A6A;
+    --mint:#3DDC97;
+    --amber:#FFB627;
+    --orange:#FF8C42;
+    --coral:#FF6B57;
+    --severe:#D6304A;
+    --slate:#8B90A8;
+    --bg:#F5F6FB;
+    --card:#FFFFFF;
+    --ink:#1B1F3B;
+    --muted:#6B7280;
+    --line:#E7E9F2;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Pretendard",sans-serif;
+    color:var(--ink);
+    background:var(--bg);
+  }
+
+  .app{
+    display:flex;
+    height:calc(100vh - 44px);
+    min-height:720px;
+    width:100%;
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* ================= 긴급재난문자 배너 ================= */
+  .disaster-banner{
+    height:44px;
+    background:#FFF3E0;
+    border-bottom:1px solid #FFD08A;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:0 18px;
+    font-size:12.5px;
+    font-weight:600;
+    color:#8A5A00;
+  }
+  .disaster-banner svg{
+    width:18px; height:18px; stroke:#D97706; fill:none; stroke-width:1.8; flex-shrink:0;
+  }
+  .disaster-banner span{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .disaster-close{
+    width:22px; height:22px; border-radius:50%; flex-shrink:0; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .disaster-close:hover{background:#FFE3AD;}
+  .disaster-close svg{width:11px; height:11px; stroke:#8A5A00; stroke-width:2.2;}
+
+  /* ================= LEFT ICON RAIL ================= */
+  .rail{
+    width:84px;
+    flex-shrink:0;
+    background:var(--navy);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:20px 0;
+  }
+  .rail-logo{
+    width:38px;height:38px;border-radius:11px;
+    background:var(--amber);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:22px; flex-shrink:0;
+  }
+  .rail-logo svg{width:20px;height:20px;stroke:var(--navy);stroke-width:2.4;fill:none;}
+  .rail-item{
+    width:100%;
+    background:none;border:none;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    padding:12px 4px;
+    color:#9AA0C7;
+    font-size:11px;font-weight:700;
+    font-family:inherit;
+  }
+  .rail-item svg{width:21px;height:21px;stroke:#9AA0C7;fill:none;stroke-width:1.8;}
+  .rail-item.active{color:#fff;background:rgba(255,255,255,0.06);}
+  .rail-item.active svg{stroke:var(--amber);}
+  .rail-item:hover{color:#fff;}
+  .rail-spacer{flex:1;}
+
+  /* ================= LEFT PANEL(S) ================= */
+  .panel{
+    width:400px;
+    flex-shrink:0;
+    background:var(--card);
+    height:100%;
+    overflow-y:auto;
+    border-right:1px solid var(--line);
+    display:none;
+    padding:22px 22px 40px;
+    transition:width .25s ease, padding .25s ease;
+  }
+  .panel.active{display:block;}
+  .panel.collapsed{
+    width:0 !important;
+    padding-left:0; padding-right:0;
+    overflow:hidden;
+    border-right:none;
+  }
+
+  .panel-toggle{
+    position:absolute;
+    top:50%;
+    left:484px;
+    transform:translate(-50%,-50%);
+    width:22px; height:64px;
+    background:var(--card);
+    border:1.5px solid var(--line);
+    border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    box-shadow:0 6px 16px -6px rgba(27,31,59,0.3);
+    z-index:6;
+    transition:left .25s ease;
+  }
+  .panel-toggle svg{
+    width:11px;height:11px;stroke:var(--navy);stroke-width:2.4;fill:none;
+    transition:transform .25s ease;
+  }
+  .panel-toggle.collapsed svg{transform:rotate(180deg);}
+
+  .eyebrow{font-size:12px;font-weight:700;color:var(--teal);letter-spacing:0.02em;}
+  .h1{font-size:21px;font-weight:800;margin:6px 0 20px;line-height:1.35;}
+
+  .search-card{
+    background:var(--bg);
+    border-radius:16px;
+    padding:6px 14px;
+  }
+  .field-row{
+    display:flex; align-items:center; gap:10px;
+    padding:13px 0;
+    border-bottom:1px solid var(--line);
+    position:relative;
+  }
+  .field-row:last-of-type{border-bottom:none;}
+
+  .autocomplete-list{
+    display:none;
+    position:absolute; top:calc(100% - 4px); left:36px; right:0; z-index:15;
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 12px 24px -12px rgba(27,31,59,0.35);
+    overflow:hidden; max-height:220px; overflow-y:auto;
+  }
+  .autocomplete-list.show{display:block;}
+  .autocomplete-item{
+    padding:11px 14px; font-size:13.5px; font-weight:600; color:var(--ink);
+    cursor:pointer; border-bottom:1px solid var(--line);
+  }
+  .autocomplete-item:last-child{border-bottom:none;}
+  .autocomplete-item:hover{background:var(--bg);}
+  .field-icon{
+    width:26px;height:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--card); flex-shrink:0;
+  }
+  .field-icon svg{width:14px;height:14px;stroke:var(--navy);fill:none;stroke-width:2;}
+  .field-row input{
+    border:none;outline:none;font-size:15px;font-weight:600;color:var(--ink);
+    width:100%;background:transparent;font-family:inherit;
+  }
+  .field-row input::placeholder{color:#B4B8CC;font-weight:500;}
+  .od-fields{position:relative;}
+  .swap-btn-main{
+    position:absolute; top:50%; right:2px; transform:translateY(-50%);
+    width:26px;height:26px;border-radius:50%;background:var(--card);
+    border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+    box-shadow:0 2px 6px -2px rgba(27,31,59,0.25);
+  }
+  .swap-btn-main svg{width:13px;height:13px;stroke:var(--teal);stroke-width:2;fill:none;}
+  .swap-btn{
+    width:26px;height:26px;border-radius:50%;background:var(--card);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+  }
+  .swap-btn svg{width:13px;height:13px;stroke:var(--teal);stroke-width:2;fill:none;}
+
+  .quick-row{display:flex;gap:8px;margin:10px 0 4px;}
+  .quick-row button{
+    flex:1;border:1px solid var(--line);background:var(--card);border-radius:10px;
+    padding:9px 0;font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;
+  }
+  .quick-row button:last-child{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  .waypoint-row{
+    display:flex; align-items:center; gap:10px;
+    padding:13px 0; border-bottom:1px solid var(--line);
+    position:relative;
+  }
+  .waypoint-row input{
+    border:none; outline:none; font-size:15px; font-weight:600; color:var(--ink);
+    width:100%; background:transparent; font-family:inherit;
+  }
+  .waypoint-row input::placeholder{color:#B4B8CC; font-weight:500;}
+  .add-waypoint-link{
+    font-size:12.5px; font-weight:700; color:var(--teal); cursor:pointer;
+    padding:10px 2px 4px;
+  }
+
+  .detail-toggle{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 2px 6px; cursor:pointer;
+  }
+  .detail-toggle span{font-size:13px;font-weight:700;color:var(--teal);}
+  .detail-panel-inner{padding-top:6px;display:none;}
+  .detail-panel-inner.open{display:block;}
+
+  .segmented{display:flex;background:var(--bg);border-radius:12px;padding:4px;margin-bottom:12px;}
+  .segmented button{
+    flex:1;border:none;background:transparent;padding:9px 0;border-radius:9px;
+    font-size:13px;font-weight:700;color:var(--slate);cursor:pointer;font-family:inherit;
+  }
+  .segmented button.active{background:var(--navy);color:#fff;}
+
+  .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+  .chip{
+    padding:8px 14px;border-radius:999px;border:1.5px solid var(--line);
+    font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;background:var(--card);
+  }
+  .chip.active{background:var(--navy);border-color:var(--navy);color:#fff;}
+
+  .time-input{display:flex;gap:8px;margin-top:8px;}
+  .time-input div{
+    flex:1;background:var(--card);border-radius:10px;padding:8px 10px;text-align:center;
+    font-size:13px;font-weight:700;border:1px solid var(--line);
+  }
+  .time-input div span{display:block;font-size:10.5px;color:var(--slate);font-weight:600;margin-bottom:2px;}
+  .time-input input{
+    width:100%;border:none;outline:none;background:transparent;font-family:inherit;
+    font-size:13.5px;font-weight:700;color:var(--ink);text-align:center;padding:2px 0 0;
+  }
+  .date-inline{display:flex;align-items:center;justify-content:center;gap:5px;}
+  .date-inline input{width:auto;flex:none;}
+  .time-input .weekday-tag{
+    display:inline;font-size:13.5px;font-weight:700;color:var(--teal);margin-top:0;white-space:nowrap;
+  }
+  .purpose-select{
+    width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;
+    font-size:14px;font-weight:700;color:var(--ink);background:var(--card);
+    font-family:inherit;outline:none;cursor:pointer;margin-top:4px;
+  }
+  .purpose-select:focus{border-color:var(--teal);}
+
+  .cta{
+    margin-top:16px;width:100%;border:none;border-radius:14px;padding:15px;
+    background:var(--amber); color:var(--navy); font-size:15px;font-weight:800;
+    cursor:pointer; font-family:inherit;
+    box-shadow:0 12px 20px -10px rgba(255,182,39,0.6);
+  }
+  .cta.secondary{background:var(--bg);color:var(--navy);box-shadow:none;border:1px solid var(--line);}
+
+  .recent-label{font-size:12.5px;font-weight:700;color:var(--slate);margin:22px 0 10px;}
+  .recent-item{
+    display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line);cursor:pointer;
+  }
+  .recent-item svg{width:16px;height:16px;stroke:var(--slate);fill:none;stroke-width:2;flex-shrink:0;}
+  .recent-item .t{font-size:13.5px;font-weight:700;}
+  .recent-item .s{font-size:11.5px;color:var(--muted);}
+
+  /* ---- result block (appears within home panel) ---- */
+  .result-block{display:none;margin-top:22px;}
+  .result-block.show{display:block;}
+  .best-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--navy);color:#fff;font-size:12px;font-weight:800;
+    padding:6px 12px;border-radius:999px;margin-bottom:12px;
+  }
+  .best-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--mint);}
+
+  .result-card{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:18px; box-shadow:0 10px 24px -18px rgba(27,31,59,0.5); margin-bottom:14px;
+  }
+  .route-od{font-size:12.5px;font-weight:700;color:var(--teal);margin-bottom:6px;}
+  .route-times{display:flex;align-items:baseline;gap:10px;}
+  .route-times .t1{font-size:24px;font-weight:800;}
+  .route-times .arrow{color:var(--slate);font-size:15px;}
+  .route-times .t2{font-size:24px;font-weight:800;color:var(--muted);}
+  .route-sub{font-size:12.5px;color:var(--muted);margin-top:4px;font-weight:600;}
+
+  .stat-row{display:flex;gap:8px;margin-top:16px;}
+  .stat-box{flex:1;background:var(--bg);border-radius:12px;padding:11px 6px;text-align:center;}
+  .stat-box svg{width:17px;height:17px;stroke:var(--teal);fill:none;stroke-width:1.8;margin-bottom:4px;}
+  .stat-box .v{font-size:14px;font-weight:800;}
+  .stat-box .l{font-size:10px;color:var(--slate);font-weight:700;margin-top:1px;}
+
+  .why-label{font-size:12.5px;font-weight:800;color:var(--navy);margin:16px 0 8px;}
+  .stackbar{display:flex;height:14px;border-radius:8px;overflow:hidden;margin-bottom:10px;}
+  .stackbar div{height:100%;}
+  .legend{display:flex;flex-wrap:wrap;gap:7px 12px;}
+  .legend .item{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted);font-weight:600;}
+  .legend .sw{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+
+  .reason-note{
+    background:#FFF7E8;border:1px solid #FFE3AD;border-radius:12px;
+    padding:12px 14px;font-size:12px;color:#8A5A00;font-weight:600;line-height:1.55;margin-top:14px;
+  }
+  .link-btn{
+    display:block;text-align:center;font-size:13px;font-weight:700;color:var(--teal);
+    margin-top:12px;cursor:pointer;
+  }
+
+  /* ================= DETAIL PANEL (slides over map) ================= */
+  .detail-panel{
+    width:380px; flex-shrink:0; height:100%;
+    background:var(--card);
+    border-right:1px solid var(--line);
+    display:none;
+    flex-direction:column;
+    box-shadow:8px 0 24px -12px rgba(27,31,59,0.25);
+  }
+  .detail-panel.active{display:flex;}
+  .sheet-head{
+    display:flex;align-items:center;justify-content:space-between;padding:22px 22px 12px;
+    border-bottom:1px solid var(--line);
+  }
+  .sheet-head h2{font-size:17px;font-weight:800;margin:0;}
+  .sheet-head .x{
+    width:30px;height:30px;border-radius:50%;background:var(--bg);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .sheet-body{flex:1;overflow-y:auto;padding:16px 22px 30px;}
+
+  .sheet-top{margin-bottom:18px;}
+  .sheet-top-line{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:6px;}
+  .sheet-divider{font-size:13px;font-weight:700;color:var(--line);letter-spacing:1px;margin-bottom:10px;user-select:none;}
+  .sheet-seat-label{font-size:12.5px;font-weight:700;color:var(--muted);}
+  .sheet-seat-label b{color:var(--mint);font-size:14px;}
+  .sheet-seat-label span{font-weight:600;color:var(--slate);}
+
+  .timeline-box{
+    background:var(--bg);border-radius:16px;padding:18px 16px;
+  }
+  .tl-station{display:flex;align-items:center;gap:10px;}
+  .tl-dot{
+    width:10px;height:10px;border-radius:50%;background:var(--navy);flex-shrink:0;
+  }
+  .tl-dot.end{background:var(--coral);}
+  .tl-label{font-size:13.5px;font-weight:800;color:var(--ink);}
+  .tl-row{display:flex;gap:12px;padding:8px 0 8px 4px;}
+  .tl-mode{
+    width:44px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;
+    padding-left:1px;border-left:2px dashed var(--line);margin-left:4px;
+  }
+  .tl-mode-badge{
+    width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:14px;color:#fff;margin:4px 0 4px -16px;line-height:1;
+  }
+  .tl-mode-badge.subway{background:var(--teal);}
+  .tl-mode-badge.bus{background:var(--orange);}
+  .tl-mode-badge.walk{background:var(--slate);}
+  .tl-mode-time{font-size:10.5px;font-weight:700;color:var(--muted);}
+  .tl-content{flex:1;min-width:0;}
+  .walk-card{
+    background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:12px 14px;font-size:12.5px;font-weight:700;color:var(--muted);
+  }
+  .tl-gap{height:10px;}
+
+  .transit-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;}
+  .transit-card .head{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .transit-card .head .badge{
+    width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-size:14px;color:#fff;flex-shrink:0;line-height:1;
+  }
+  .badge.subway{background:var(--teal);}
+  .badge.bus{background:var(--orange);}
+  .transit-card .head h3{font-size:14px;font-weight:800;margin:0;}
+
+  .car-dir-note{font-size:10.5px;color:var(--slate);font-weight:600;margin-bottom:8px;}
+  .cars{display:flex;gap:4px;margin:6px 0;}
+  .car-cell{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .car-no{font-size:10px;font-weight:800;color:var(--muted);}
+  .car-bar{width:100%;height:22px;border-radius:5px;}
+
+  .congestion-detail-btn{
+    width:100%;margin-top:10px;border:1.5px solid var(--line);background:#fff;
+    border-radius:10px;padding:9px 0;font-size:12.5px;font-weight:700;color:var(--teal);
+    cursor:pointer;font-family:inherit;
+  }
+  .congestion-detail-btn:hover{background:var(--bg);}
+
+  .mini-legend{display:flex;flex-wrap:wrap;gap:10px 12px;margin-top:8px;}
+  .mini-legend .item{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted);font-weight:700;}
+  .mini-legend .sw{width:8px;height:8px;border-radius:2px;}
+
+  .bus-eta{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--line);}
+  .bus-eta:first-of-type{border-top:none;}
+  .bus-eta .name{font-size:13px;font-weight:700;}
+  .bus-eta .sub{font-size:11px;color:var(--muted);}
+  .bus-eta .eta{font-size:13px;font-weight:800;color:var(--navy);}
+
+  /* ================= ROOM ================= */
+  .code-row{display:flex;gap:8px;margin:22px 0;}
+  .code-box{
+    flex:1;min-width:0;aspect-ratio:1;border:2px solid var(--line);border-radius:12px;
+    text-align:center;font-size:20px;font-weight:800;font-family:inherit;
+    background:var(--bg);color:var(--ink);outline:none;padding:0;
+  }
+  .code-box:focus{border-color:var(--teal);}
+  .code-box.filled{border-color:var(--navy);color:var(--navy);background:#fff;}
+
+  .dest-card{background:var(--navy);color:#fff;border-radius:18px;padding:20px;margin-bottom:16px;}
+  .dest-card .eyebrow{font-size:11.5px;font-weight:700;color:#B9C0F0;letter-spacing:0.02em;}
+  .dest-card h2{font-size:18px;font-weight:800;margin:6px 0 14px;}
+  .dest-card .meta{display:flex;gap:14px;}
+  .dest-card .meta div{font-size:11px;color:#C7CCF2;font-weight:600;}
+  .dest-card .meta b{display:block;font-size:13.5px;color:#fff;font-weight:800;margin-top:2px;}
+
+  .invite-row{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--bg);border-radius:14px;padding:12px 16px;margin-bottom:18px;
+  }
+  .invite-row .code{font-size:14.5px;font-weight:800;letter-spacing:0.06em;}
+  .invite-row .copy{font-size:12px;font-weight:700;color:var(--teal);cursor:pointer;}
+
+  .member-row{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line);}
+  .avatar{
+    width:36px;height:36px;border-radius:50%;background:var(--teal);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex-shrink:0;
+  }
+  .member-row .info{flex:1;min-width:0;}
+  .member-row .name{font-size:13.5px;font-weight:800;display:flex;align-items:center;gap:6px;}
+  .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .member-row .eta{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:1px;}
+  .member-row .arrival{font-size:13.5px;font-weight:800;text-align:right;flex-shrink:0;}
+
+  .invite-more{
+    margin-top:16px;width:100%;border:1.5px dashed var(--slate);border-radius:14px;
+    background:none;padding:12px;font-size:13px;font-weight:700;color:var(--teal);cursor:pointer;font-family:inherit;
+  }
+
+  .placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:70%;text-align:center;color:var(--slate);}
+  .placeholder svg{width:44px;height:44px;stroke:var(--slate);fill:none;stroke-width:1.4;margin-bottom:14px;}
+  .placeholder .t{font-size:14.5px;font-weight:700;color:var(--muted);}
+  .placeholder .s{font-size:12px;margin-top:4px;}
+
+  /* ================= MAP AREA ================= */
+  .map-area{
+    flex:1;
+    position:relative;
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 25% 15%, #E4E9F7 0, transparent 55%),
+      repeating-linear-gradient(0deg, #EDEFFA 0 34px, #E4E7F4 34px 35px),
+      repeating-linear-gradient(90deg, #EDEFFA 0 34px, #E4E7F4 34px 35px);
+  }
+  .map-controls{
+    position:absolute;bottom:70px;right:18px;display:flex;flex-direction:column;
+    background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 16px -6px rgba(27,31,59,0.3);z-index:2;
+  }
+  .map-controls button{
+    width:38px;height:38px;border:none;background:#fff;border-bottom:1px solid var(--line);
+    font-size:17px;font-weight:700;color:var(--navy);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;padding:0;
+  }
+  .map-controls button:last-child{border-bottom:none;}
+
+  .weather-chip{
+    position:absolute;top:18px;right:18px;background:#fff;border-radius:14px;
+    padding:10px 16px;display:flex;align-items:center;gap:10px;
+    box-shadow:0 6px 16px -6px rgba(27,31,59,0.3);z-index:2;
+  }
+  .weather-chip svg{width:22px;height:22px;stroke:var(--orange);fill:none;stroke-width:1.6;}
+  .weather-chip .temp{font-size:15px;font-weight:800;}
+  .weather-chip .desc{font-size:10.5px;color:var(--muted);font-weight:600;}
+
+  .nearby-stops-layer{
+    position:absolute; inset:0; z-index:1; display:none;
+  }
+  .nearby-stops-layer.show{display:block;}
+  .nearby-stops-btn{
+    position:absolute; top:82px; right:18px; z-index:2;
+    background:#fff; border-radius:12px; padding:10px 14px;
+    display:flex; align-items:center; gap:8px;
+    font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer;
+    box-shadow:0 6px 16px -6px rgba(27,31,59,0.3);
+  }
+  .nearby-stops-btn svg{width:16px; height:16px; stroke:var(--muted); fill:none; stroke-width:1.8;}
+  .nearby-stops-btn.active{background:var(--navy); color:#fff;}
+  .nearby-stops-btn.active svg{stroke:var(--amber);}
+
+  .scale-chip{
+    position:absolute;bottom:18px;left:18px;background:rgba(255,255,255,0.9);
+    font-size:10.5px;font-weight:700;color:var(--muted);padding:4px 10px;border-radius:6px;z-index:2;
+  }
+
+  #tmapDiv{
+    position:absolute;inset:0;z-index:0;display:none;
+  }
+  #tmapDiv.ready{display:block;}
+  .map-mock-layer{position:absolute;inset:0;z-index:1;transition:transform .2s ease;transform-origin:center center;}
+  .map-mock-layer.hide{display:none;}
+  .api-status{
+    position:absolute;top:18px;left:18px;z-index:3;
+    background:rgba(27,31,59,0.9);color:#fff;font-size:11.5px;font-weight:700;
+    padding:8px 14px;border-radius:10px;line-height:1.5;max-width:280px;display:none;
+  }
+  .api-status.show{display:block;}
+  .api-status a{color:#FFD98A;}
+
+  /* ================= NOTES (below the app) ================= */
+  .notes-wrap{padding:36px 40px 60px;background:#fff;border-top:1px solid var(--line);}
+  .notes{max-width:920px;margin:0 auto;font-size:13.5px;line-height:1.75;color:var(--muted);columns:2;column-gap:40px;}
+  .notes h3{color:var(--ink);font-size:15px;margin:0 0 8px;break-after:avoid;}
+  .notes .block{break-inside:avoid;margin-bottom:24px;}
+  .notes code{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:12px;}
+  .notes-title{max-width:920px;margin:0 auto 20px;font-size:19px;font-weight:800;color:var(--ink);}
+</style>
+</head>
+<body>
+
+<!-- ================= 긴급재난문자 배너 (data.go.kr) ================= -->
+<div class="disaster-banner" id="disasterBanner">
+  <svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-2.96L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+  <span><b>[안전안내문자]</b> 서울 강남구 — 오늘 18:00~20:00 시간당 20mm 이상 호우특보. 지하철·역사 주변 침수 위험 지역 이용 시 주의하세요.</span>
+  <div class="disaster-close" onclick="closeDisasterBanner()">
+    <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ================= ICON RAIL ================= -->
+  <nav class="rail">
+    <div class="rail-logo"><svg viewBox="0 0 24 24"><path d="M12 3l8 6-8 12-8-12z"/></svg></div>
+    <button class="rail-item active" data-panel="panel-home" onclick="goRail(this,'panel-home')">
+      <svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg>홈
+    </button>
+    <button class="rail-item" data-panel="panel-transit" onclick="goRail(this,'panel-transit')">
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="14" rx="3"/><path d="M4 13h16M8 18l-1.5 3M16 18l1.5 3M8 8h8"/></svg>대중교통
+    </button>
+    <button class="rail-item" data-panel="panel-saved" onclick="goRail(this,'panel-saved')">
+      <svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>저장
+    </button>
+    <button class="rail-item" data-panel="panel-room-join" onclick="goRail(this,'panel-room-join')">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c2.8 0 5 2.2 5 5.5"/></svg>방
+    </button>
+    <div class="rail-spacer"></div>
+    <button class="rail-item" data-panel="panel-account" onclick="goRail(this,'panel-account')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>계정
+    </button>
+  </nav>
+
+  <!-- ================= PANEL COLLAPSE/EXPAND TOGGLE ================= -->
+  <div class="panel-toggle" id="panelToggle" onclick="togglePanel()">
+    <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+  </div>
+
+  <!-- ================= HOME PANEL ================= -->
+  <aside class="panel active" id="panel-home">
+    <div class="eyebrow">공공데이터 기반 출발시간 계산</div>
+    <div class="h1">언제 출발해야<br>딱 맞게 도착할까요?</div>
+
+    <div class="search-card">
+      <div class="od-fields">
+        <div class="field-row">
+          <div class="field-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="2.5"/><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/></svg></div>
+          <input type="text" id="originInput" placeholder="출발지" value="고려대학교" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
+          <div class="autocomplete-list" id="originInputList"></div>
+        </div>
+        <div class="field-row">
+          <div class="field-icon"><svg viewBox="0 0 24 24"><path d="M5 3v18M5 4h11l-2.5 4L16 12H5"/></svg></div>
+          <input type="text" id="destInput" placeholder="목적지" value="강남역 2번 출구" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
+          <div class="autocomplete-list" id="destInputList"></div>
+        </div>
+        <div class="swap-btn-main" onclick="swapFields()"><svg viewBox="0 0 24 24"><path d="M7 7h11M15 3l3 4-3 4M17 17H6M9 21l-3-4 3-4"/></svg></div>
+      </div>
+
+      <div class="waypoint-row" id="waypointRow" style="display:none;">
+        <div class="field-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg></div>
+        <input type="text" id="waypointInput" placeholder="경유지 (예: 친구 픽업 장소)" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
+        <div class="swap-btn" onclick="removeWaypoint()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+        <div class="autocomplete-list" id="waypointInputList"></div>
+      </div>
+      <div class="add-waypoint-link" id="addWaypointLink" onclick="addWaypoint()">+ 경유지 추가</div>
+
+      <div class="detail-toggle" onclick="document.getElementById('detailPanelInner').classList.toggle('open')">
+        <span>상세 입력</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" stroke="#2D6A6A" stroke-width="2" fill="none"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+
+      <div class="detail-panel-inner open" id="detailPanelInner">
+        <div class="segmented">
+          <button class="active" onclick="selectSegment(this,'도착 시간')">도착시간 기준</button>
+          <button onclick="selectSegment(this,'출발 시간')">출발시간 기준</button>
+        </div>
+        <div class="time-input">
+          <div>
+            <span>날짜</span>
+            <div class="date-inline">
+              <input type="date" id="tripDate" onchange="validateTripDateTime()">
+              <span id="tripDateWeekday" class="weekday-tag"></span>
+            </div>
+          </div>
+          <div>
+            <span id="timeInputLabel">도착 시간</span>
+            <input type="time" id="tripTime" value="19:00" onchange="validateTripDateTime()">
+          </div>
+        </div>
+        <div class="recent-label" style="margin:14px 0 8px;">이동 목적</div>
+        <select class="purpose-select" id="purposeSelect">
+          <option value="school">등교</option>
+          <option value="appointment" selected>약속</option>
+          <option value="work">출근</option>
+          <option value="hospital">병원</option>
+          <option value="etc">기타</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="cta" onclick="runSearch()">길찾기</button>
+
+    <!-- Result block appears here after search -->
+    <div class="result-block" id="resultBlock">
+      <div class="best-badge"><span class="dot"></span>최적 경로</div>
+
+      <div class="result-card">
+        <div class="route-od" id="routeOD">고려대학교 → 강남역 2번 출구</div>
+        <div class="route-times"><span class="t1" id="resultDepartTime">18:14</span><span class="arrow">→</span><span class="t2" id="resultArriveTime">19:00</span></div>
+        <div class="route-sub" id="routeSubText">지금 나가면 46분 뒤 도착 · 지하철 2호선 · 목적: 약속</div>
+
+        <div class="stat-row">
+          <div class="stat-box">
+            <svg viewBox="0 0 24 24"><path d="M4 17V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10M2 17h20M6 21l2-2h8l2 2"/></svg>
+            <div class="v">62%</div><div class="l">앉을 확률</div>
+          </div>
+          <div class="stat-box">
+            <svg viewBox="0 0 24 24"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><path d="M9 19l3 3 3-3M12 12v10"/></svg>
+            <div class="v">18:10</div><div class="l">비 예보 시작</div>
+          </div>
+          <div class="stat-box">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            <div class="v">46분</div><div class="l">이동 시간</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="why-label">왜 이 시간을 추천했나요?</div>
+      <div class="result-card">
+        <div class="stackbar">
+          <div style="width:38%;background:#2D6A6A;"></div>
+          <div style="width:8%;background:#3DDC97;"></div>
+          <div style="width:13%;background:#FF6B57;"></div>
+          <div style="width:6%;background:#FFB627;"></div>
+          <div style="width:11%;background:#FF8C42;"></div>
+          <div style="width:11%;background:#8B90A8;"></div>
+          <div style="width:13%;background:#1B1F3B;"></div>
+        </div>
+        <div class="legend">
+          <div class="item"><span class="sw" style="background:#2D6A6A;"></span>기본 이동 18분</div>
+          <div class="item"><span class="sw" style="background:#3DDC97;"></span>대기 4분</div>
+          <div class="item"><span class="sw" style="background:#FF6B57;"></span>혼잡도 보정 6분</div>
+          <div class="item"><span class="sw" style="background:#FFB627;"></span>날씨 보정 3분</div>
+          <div class="item"><span class="sw" style="background:#FF8C42;"></span>교통 보정 5분</div>
+          <div class="item"><span class="sw" style="background:#8B90A8;"></span>목적 여유 5분</div>
+          <div class="item"><span class="sw" style="background:#1B1F3B;"></span>개인 여유 5분</div>
+        </div>
+        <div class="reason-note">최근 7일간 이 시간대 강남역 2호선 평균 혼잡도가 평소보다 높아 6분을 더했어요. 18:10부터 비 예보가 있어 3분의 여유를 추가했습니다.</div>
+      </div>
+
+      <button class="cta secondary" onclick="openDetail()">상세보기</button>
+      <div class="link-btn" onclick="resetSearch()">다시입력</div>
+    </div>
+
+    <div id="recentSection">
+      <div class="recent-label">최근 검색</div>
+      <div class="recent-item" onclick="useRecent('고려대학교','강남역 2번 출구')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        <div><div class="t">강남역 2번 출구</div><div class="s">고려대학교 → 강남역 · 어제</div></div>
+      </div>
+      <div class="recent-item" onclick="useRecent('집','인천국제공항 제1터미널')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        <div><div class="t">인천국제공항 제1터미널</div><div class="s">집 → 인천공항 · 3일 전</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= PLACEHOLDER PANELS ================= -->
+  <aside class="panel" id="panel-transit">
+    <div class="h1" style="margin-bottom:0;">대중교통</div>
+    <div class="placeholder">
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="14" rx="3"/><path d="M4 13h16M8 18l-1.5 3M16 18l1.5 3M8 8h8"/></svg>
+      <div class="t">실시간 대중교통 정보</div><div class="s">노선 및 혼잡도 검색 화면</div>
+    </div>
+  </aside>
+  <aside class="panel" id="panel-saved">
+    <div class="h1" style="margin-bottom:0;">저장</div>
+    <div class="placeholder">
+      <svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
+      <div class="t">자주 가는 경로</div><div class="s">저장한 출발지·목적지 목록</div>
+    </div>
+  </aside>
+  <aside class="panel" id="panel-account">
+    <!-- 로그인 -->
+    <div id="accountLogin">
+      <div class="eyebrow">계정</div>
+      <div class="h1">로그인하고<br>내 정보를 관리하세요</div>
+      <div class="search-card">
+        <div class="field-row">
+          <div class="field-icon"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg></div>
+          <input type="text" id="loginEmail" placeholder="이메일" value="">
+        </div>
+        <div class="field-row">
+          <div class="field-icon"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+          <input type="password" id="loginPwd" placeholder="비밀번호" value="">
+        </div>
+      </div>
+      <button class="cta" onclick="doLogin()">로그인</button>
+      <div class="link-btn" onclick="showAccountView('signup')">계정이 없으신가요? 회원가입</div>
+    </div>
+
+    <!-- 회원가입 -->
+    <div id="accountSignup" style="display:none;">
+      <div class="eyebrow">회원가입</div>
+      <div class="h1">서비스 이용을 위해<br>정보를 입력해주세요</div>
+      <div class="search-card">
+        <div class="field-row">
+          <div class="field-icon"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg></div>
+          <input type="text" id="signupEmail" placeholder="이메일" value="">
+        </div>
+        <div class="field-row">
+          <div class="field-icon"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+          <input type="password" id="signupPwd" placeholder="비밀번호" value="">
+        </div>
+        <div class="field-row">
+          <div class="field-icon"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+          <input type="password" id="signupPwdCheck" placeholder="비밀번호 확인" value="">
+        </div>
+        <div class="field-row">
+          <div class="field-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+          <input type="text" id="signupNickname" placeholder="닉네임" value="">
+        </div>
+      </div>
+      <button class="cta" onclick="doSignup()">가입하기</button>
+      <div class="link-btn" onclick="showAccountView('login')">이미 계정이 있으신가요? 로그인</div>
+    </div>
+
+    <!-- 내 정보 -->
+    <div id="accountInfo" style="display:none;">
+      <div class="eyebrow">계정</div>
+      <div class="h1" id="accountGreeting">안녕하세요</div>
+      <div class="result-card">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+          <div class="avatar" id="accountAvatar" style="width:46px;height:46px;font-size:16px;">나</div>
+          <div>
+            <div style="font-size:15px;font-weight:800;" id="accountNickname">사용자</div>
+            <div style="font-size:12.5px;color:var(--muted);" id="accountEmail">user@example.com</div>
+          </div>
+        </div>
+        <div class="field-row" style="border-bottom:1px solid var(--line);padding:12px 0;">
+          <span style="font-size:13px;color:var(--muted);font-weight:700;width:90px;flex-shrink:0;">기본 출발지</span>
+          <span style="font-size:13.5px;font-weight:700;">고려대학교</span>
+        </div>
+        <div class="field-row" style="padding:12px 0;">
+          <span style="font-size:13px;color:var(--muted);font-weight:700;width:90px;flex-shrink:0;">선호 이동수단</span>
+          <span style="font-size:13.5px;font-weight:700;">지하철</span>
+        </div>
+      </div>
+      <button class="cta secondary" onclick="doLogout()">로그아웃</button>
+    </div>
+  </aside>
+
+  <!-- ================= ROOM JOIN ================= -->
+  <aside class="panel" id="panel-room-join">
+    <div class="eyebrow">약속방</div>
+    <div class="h1">초대 코드를<br>입력해주세요</div>
+    <div class="code-row" id="codeRow">
+      <input class="code-box filled" maxlength="1" value="7" oninput="codeBoxInput(this)">
+      <input class="code-box filled" maxlength="1" value="2" oninput="codeBoxInput(this)">
+      <input class="code-box filled" maxlength="1" value="K" oninput="codeBoxInput(this)">
+      <input class="code-box filled" maxlength="1" value="9" oninput="codeBoxInput(this)">
+      <input class="code-box" maxlength="1" value="" oninput="codeBoxInput(this)">
+      <input class="code-box" maxlength="1" value="" oninput="codeBoxInput(this)">
+    </div>
+    <button class="cta" onclick="joinRoom()">참여하기</button>
+    <div class="link-btn" onclick="createRoom()">새 약속방 만들기</div>
+  </aside>
+
+  <!-- ================= ROOM DASHBOARD ================= -->
+  <aside class="panel" id="panel-room-dash">
+    <div class="h1" style="margin-bottom:16px;">약속방</div>
+    <div class="dest-card">
+      <div class="eyebrow">최종 목적지</div>
+      <h2>강남역 2번 출구</h2>
+      <div class="meta">
+        <div>약속 시간<b>19:00</b></div>
+        <div>참여 인원<b>4명</b></div>
+        <div>상태<b>3명 준비중</b></div>
+      </div>
+    </div>
+    <div class="invite-row">
+      <div><div style="font-size:11px;color:var(--slate);font-weight:700;">초대코드</div><div class="code">72K9-XQ</div></div>
+      <div class="copy" onclick="copyInviteCode(this)">복사하기</div>
+    </div>
+
+    <div class="recent-label" style="margin:4px 0 4px;">참여자</div>
+    <div class="member-row">
+      <div class="avatar">나</div>
+      <div class="info"><div class="name">이서연 <span class="status-dot" style="background:#3DDC97;"></span></div><div class="eta">출발함 · 18:14</div></div>
+      <div class="arrival">19:00</div>
+    </div>
+    <div class="member-row">
+      <div class="avatar" style="background:#8B90A8;">김</div>
+      <div class="info"><div class="name">김도윤 <span class="status-dot" style="background:#FFB627;"></span></div><div class="eta">준비중</div></div>
+      <div class="arrival">19:04</div>
+    </div>
+    <div class="member-row">
+      <div class="avatar" style="background:#FF8C42;">박</div>
+      <div class="info"><div class="name">박하은 <span class="status-dot" style="background:#FFB627;"></span></div><div class="eta">준비중</div></div>
+      <div class="arrival">18:57</div>
+    </div>
+    <div class="member-row">
+      <div class="avatar" style="background:#1B1F3B;">최</div>
+      <div class="info"><div class="name">최지호 <span class="status-dot" style="background:#3DDC97;"></span></div><div class="eta">출발함 · 18:20</div></div>
+      <div class="arrival">19:02</div>
+    </div>
+
+    <button class="invite-more" onclick="inviteMore()">+ 새 참여자 초대하기</button>
+  </aside>
+
+  <!-- ================= DETAIL PANEL (slides over map) ================= -->
+  <aside class="detail-panel" id="detailPanel">
+    <div class="sheet-head"><h2>세부정보</h2><div class="x" onclick="closeDetail()"><svg width="13" height="13" viewBox="0 0 24 24" stroke="#1B1F3B" stroke-width="2.4" fill="none"><path d="M6 6l12 12M18 6L6 18"/></svg></div></div>
+    <div class="sheet-body">
+      <div class="sheet-top">
+        <div class="sheet-top-line">예상 소요시간 46분 | 출발 <span id="detailDepartTime">18:14</span> ~ 도착 <span id="detailArriveTime">19:00</span></div>
+        <div class="sheet-divider">----------</div>
+        <div class="sheet-seat-label">앉아서 갈 확률 <b>62%</b> <span>(최근 7일 평균)</span></div>
+      </div>
+
+      <div class="timeline-box">
+        <!-- 구간 1: 도보 -->
+        <div class="tl-station"><span class="tl-dot"></span><span class="tl-label">출발지</span></div>
+        <div class="tl-row">
+          <div class="tl-mode"><div class="tl-mode-badge walk">🚶</div><div class="tl-mode-time">3분</div></div>
+          <div class="tl-content">
+            <div class="walk-card">고려대입구 정류장까지 도보 이동</div>
+          </div>
+        </div>
+        <div class="tl-station"><span class="tl-dot"></span><span class="tl-label">고려대입구 정류장</span></div>
+
+        <!-- 구간 2: 버스 -->
+        <div class="tl-row">
+          <div class="tl-mode"><div class="tl-mode-badge bus">🚌</div><div class="tl-mode-time">6분</div></div>
+          <div class="tl-content">
+            <div class="transit-card">
+              <div class="head"><div class="badge bus">🚌</div><h3>버스 도착정보</h3></div>
+              <div class="bus-eta"><div><div class="name">146번</div><div class="sub">고려대입구 정류장</div></div><div class="eta">4분 후</div></div>
+              <div class="bus-eta"><div><div class="name">472번</div><div class="sub">고려대입구 정류장</div></div><div class="eta">11분 후</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tl-station"><span class="tl-dot end"></span><span class="tl-label">고려대입구역 정류장</span></div>
+
+        <div class="tl-gap"></div>
+
+        <!-- 구간 3: 도보(환승) -->
+        <div class="tl-station"><span class="tl-dot"></span><span class="tl-label">고려대입구역 정류장</span></div>
+        <div class="tl-row">
+          <div class="tl-mode"><div class="tl-mode-badge walk">🚶</div><div class="tl-mode-time">2분</div></div>
+          <div class="tl-content">
+            <div class="walk-card">지하철역 승강장까지 도보 이동 · 환승</div>
+          </div>
+        </div>
+        <div class="tl-station"><span class="tl-dot"></span><span class="tl-label">고려대입구역</span></div>
+
+        <!-- 구간 4: 지하철 -->
+        <div class="tl-row">
+          <div class="tl-mode"><div class="tl-mode-badge subway">🚇</div><div class="tl-mode-time">28분</div></div>
+          <div class="tl-content">
+            <div class="transit-card">
+              <div class="head"><div class="badge subway">🚇</div><h3>지하철 2호선 · 상행</h3></div>
+              <div class="car-dir-note">진입 열차 칸별 혼잡도 · 앞쪽(1호차) → 뒤쪽(8호차) 순</div>
+              <div class="cars">
+                <div class="car-cell"><span class="car-no">1</span><div class="car-bar" style="background:#3DDC97;"></div></div>
+                <div class="car-cell"><span class="car-no">2</span><div class="car-bar" style="background:#3DDC97;"></div></div>
+                <div class="car-cell"><span class="car-no">3</span><div class="car-bar" style="background:#FFB627;"></div></div>
+                <div class="car-cell"><span class="car-no">4</span><div class="car-bar" style="background:#FF8C42;"></div></div>
+                <div class="car-cell"><span class="car-no">5</span><div class="car-bar" style="background:var(--severe);"></div></div>
+                <div class="car-cell"><span class="car-no">6</span><div class="car-bar" style="background:#FF8C42;"></div></div>
+                <div class="car-cell"><span class="car-no">7</span><div class="car-bar" style="background:#3DDC97;"></div></div>
+                <div class="car-cell"><span class="car-no">8</span><div class="car-bar" style="background:#3DDC97;"></div></div>
+              </div>
+              <div class="mini-legend">
+                <div class="item"><span class="sw" style="background:#3DDC97;"></span>여유</div>
+                <div class="item"><span class="sw" style="background:#FFB627;"></span>보통</div>
+                <div class="item"><span class="sw" style="background:#FF8C42;"></span>혼잡</div>
+                <div class="item"><span class="sw" style="background:var(--severe);"></span>매우혼잡</div>
+              </div>
+              <button class="congestion-detail-btn" onclick="alert('혼잡도/시간표 상세 화면은 추후 연동됩니다.')">혼잡도/시간표</button>
+            </div>
+          </div>
+        </div>
+        <div class="tl-station"><span class="tl-dot end"></span><span class="tl-label">강남역</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= MAP AREA ================= -->
+  <main class="map-area">
+    <div class="api-status" id="apiStatus"></div>
+
+    <!-- 실제 TMAP 지도가 여기에 렌더링됩니다 (YOUR_TMAP_APP_KEY 설정 시) -->
+    <div id="tmapDiv"></div>
+
+    <!-- 목업 지도: appKey가 없거나 API 로드에 실패하면 계속 이 화면이 보입니다 -->
+    <div class="map-mock-layer" id="mapMockLayer">
+      <svg width="100%" height="100%" viewBox="0 0 800 700" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;">
+        <path d="M60 560 C 200 380, 340 620, 430 400 S 620 220, 700 90"
+              stroke="#2D6A6A" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="1 16"/>
+        <circle cx="60" cy="560" r="10" fill="#1B1F3B"/>
+        <circle cx="700" cy="90" r="10" fill="#FF6B57"/>
+        <text x="76" y="565" font-size="15" font-weight="700" fill="#1B1F3B" font-family="sans-serif">고려대학교</text>
+        <text x="620" y="80" font-size="15" font-weight="700" fill="#FF6B57" font-family="sans-serif">강남역</text>
+        <g id="myLocationMarker" style="display:none;">
+          <circle cx="400" cy="350" r="20" fill="#4C5FD5" opacity="0.2"/>
+          <circle cx="400" cy="350" r="8" fill="#4C5FD5" stroke="#fff" stroke-width="2"/>
+          <text x="416" y="355" font-size="13" font-weight="700" fill="#1B1F3B" font-family="sans-serif">내 위치</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- 내 주변 정류장 (data.go.kr 버스정류소정보, GPS 기반) -->
+    <div class="nearby-stops-layer" id="nearbyStopsLayer">
+      <svg width="100%" height="100%" viewBox="0 0 800 700" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;">
+        <g transform="translate(180,470)"><circle r="9" fill="#4C5FD5"/><text x="14" y="4" font-size="13" font-weight="700" fill="#1B1F3B" font-family="sans-serif">고대정문 정류장</text></g>
+        <g transform="translate(350,340)"><circle r="9" fill="#4C5FD5"/><text x="14" y="4" font-size="13" font-weight="700" fill="#1B1F3B" font-family="sans-serif">안암오거리 정류장</text></g>
+        <g transform="translate(540,190)"><circle r="9" fill="#4C5FD5"/><text x="14" y="4" font-size="13" font-weight="700" fill="#1B1F3B" font-family="sans-serif">신설동역 정류장</text></g>
+      </svg>
+    </div>
+
+    <div class="map-controls">
+      <button onclick="locateMe()" title="내 위치"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+      <button onclick="zoomMap(1)">+</button>
+      <button onclick="zoomMap(-1)">&#8722;</button>
+    </div>
+    <div class="nearby-stops-btn" id="nearbyStopsBtn" onclick="toggleNearbyStops()">
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="14" rx="3"/><path d="M4 13h16M8 18l-1.5 3M16 18l1.5 3M8 8h8"/></svg>
+      내 주변 정류장
+    </div>
+    <div class="scale-chip">100m</div>
+    <div class="weather-chip">
+      <svg viewBox="0 0 24 24"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><path d="M9 19l1.5 2M13 19l1.5 2M17 19l1.5 2"/></svg>
+      <div><div class="temp">24&deg;</div><div class="desc">18:10 비 예보</div></div>
+    </div>
+  </main>
+
+</div>
+
+<!-- ================= NOTES ================= -->
+<div class="notes-wrap">
+  <div class="notes-title">디자인 노트</div>
+  <div class="notes">
+    <div class="block">
+      <h3>레이아웃 구조</h3>
+      PPT 와이어프레임의 왼쪽 세로 아이콘바(홈·대중교통·저장·방·계정)를 그대로 살리고, 레퍼런스 화면(네이버맵·구글맵)처럼 <b>아이콘바 + 검색/결과 패널 + 지도</b> 3단 구조의 데스크톱 웹 레이아웃으로 구성했습니다. 왼쪽 상단 홈, 방 메뉴를 눌러 전체 흐름을 확인해보세요.
+    </div>
+    <div class="block">
+      <h3>색상 팔레트</h3>
+      <code>#1B1F3B</code> 딥 네이비 (주요 텍스트·강조)<br>
+      <code>#2D6A6A</code> 틸 (기본/차분한 정보)<br>
+      <code>#FFB627</code> 앰버 (핵심 액션 버튼)<br>
+      <code>#FF6B57</code> 코랄 (혼잡·주의 신호)<br>
+      <code>#3DDC97</code> 민트 (여유·정상 상태)
+    </div>
+    <div class="block">
+      <h3>시그니처 요소 — 시간 스택 바</h3>
+      결과 패널의 "시간 스택 바"가 이 서비스의 핵심 차별점이에요. 추천 출발시간이 기본 이동·대기·혼잡도·날씨·교통·목적·개인 여유 중 무엇으로 구성됐는지 색상 막대로 보여줘서, "왜 이 시간을 추천했는지" 설명하는 발표 포인트로 그대로 쓸 수 있습니다.
+    </div>
+    <div class="block">
+      <h3>TMAP 기반 API 6개, 화면별 자리 배치</h3>
+      · 대중교통 요약정보 → 결과 카드의 이동시간/환승 정보<br>
+      · 다중 경유지 안내 → 검색 폼의 "+ 경유지 추가"<br>
+      · 진입역 기준 칸 혼잡도 → 세부정보 패널의 칸별 혼잡도 그래프<br>
+      · 버스정류소정보(GPS, data.go.kr) → 지도 좌하단 "내 주변 정류장" 버튼<br>
+      · 긴급재난문자(data.go.kr) → 화면 상단 안전안내문자 배너<br>
+      · 기상청 단기예보(data.go.kr) → 지도 좌하단 날씨 위젯<br>
+      대중교통 요약정보·칸 혼잡도는 appKey가 필요한 유료/무료체험 상품이라 브라우저에서 직접 부르면 안 되고, Spring Boot 백엔드가 대신 호출해서 우리 서버 API로 감싸줘야 해요.
+    </div>
+    <div class="block">
+      <h3>TMAP 지도 API — 이미 연동되어 있어요</h3>
+      이 파일의 &lt;head&gt;에 실제 TMAP 지도 API v2 스크립트와 초기화 코드가 이미 들어있습니다. 다음 순서로 진행하면 목업 대신 진짜 지도가 떠요:<br>
+      1. <a href="https://openapi.sk.com" target="_blank">openapi.sk.com</a>에서 회원가입 → 애플리케이션 등록 → TMAP 상품 추가 후 appKey 발급<br>
+      2. &lt;head&gt; 안의 <code>YOUR_TMAP_APP_KEY</code>를 발급받은 값으로 교체<br>
+      3. 이 파일을 웹 서버(또는 localhost)로 열기<br>
+      appKey가 없거나 잘못됐으면 화면 좌상단에 안내 메시지가 뜨고 지금 보시는 목업 지도가 계속 표시됩니다. Claude 미리보기 화면에서는 스크립트 로드 자체가 제한되어 있어 항상 목업으로 보여요 — 다운로드해서 직접 열어보셔야 실제 지도를 확인할 수 있습니다.
+    </div>
+    <div class="block">
+      <h3>다음에 다듬으면 좋은 부분</h3>
+      · 상세 입력의 시간 선택을 실제 date/time 피커로 교체<br>
+      · 방 목록이 여러 개일 때의 방 목록 → 상세 화면 추가<br>
+      · 반응형(모바일) 레이아웃에서는 패널을 하단 시트로 전환
+    </div>
+  </div>
+</div>
+
+<script>
+function goRail(el, panelId){
+  document.querySelectorAll('.rail-item').forEach(r=>r.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>{ p.classList.remove('active'); p.classList.remove('collapsed'); });
+  document.getElementById(panelId).classList.add('active');
+  closeDetail();
+  updateToggle();
+}
+function togglePanel(){
+  var panel = document.querySelector('.panel.active');
+  if(!panel) return;
+  var willCollapse = !panel.classList.contains('collapsed');
+  panel.classList.toggle('collapsed');
+  if(willCollapse){
+    closeDetail();
+  }
+  updateToggle();
+}
+function updateToggle(){
+  var panel = document.querySelector('.panel.active');
+  var toggle = document.getElementById('panelToggle');
+  if(!panel || !toggle) return;
+  var collapsed = panel.classList.contains('collapsed');
+  var railWidth = 84;
+  var panelWidth = collapsed ? 0 : 400;
+  toggle.style.left = (railWidth + panelWidth) + 'px';
+  toggle.classList.toggle('collapsed', collapsed);
+}
+
+/* ================= 도착/출발 세그먼트 & 이동목적 ================= */
+function selectSegment(el, label){
+  el.parentElement.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+  el.classList.add('active');
+  document.getElementById('timeInputLabel').textContent = label;
+}
+
+/* ================= 최근 검색 클릭 시 자동 입력 ================= */
+function useRecent(origin, dest){
+  document.getElementById('originInput').value = origin;
+  document.getElementById('destInput').value = dest;
+  runSearch();
+}
+
+/* ================= 방 코드 입력 ================= */
+function codeBoxInput(el){
+  el.value = el.value.toUpperCase();
+  if(el.value){
+    el.classList.add('filled');
+    var next = el.nextElementSibling;
+    if(next && next.classList.contains('code-box')) next.focus();
+  }else{
+    el.classList.remove('filled');
+  }
+}
+function joinRoom(){
+  var boxes = document.querySelectorAll('#codeRow .code-box');
+  var code = '';
+  boxes.forEach(function(b){ code += b.value; });
+  if(code.length < 6){
+    alert('초대 코드 6자리를 모두 입력해주세요.');
+    return;
+  }
+  goRail(document.querySelector('[data-panel="panel-room-join"]'), 'panel-room-dash');
+}
+function createRoom(){
+  goRail(document.querySelector('[data-panel="panel-room-join"]'), 'panel-room-dash');
+}
+
+/* ================= 초대코드 복사 ================= */
+function copyInviteCode(el){
+  var code = document.querySelector('.invite-row .code').textContent;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(code).catch(function(){});
+  }
+  var original = el.textContent;
+  el.textContent = '복사됨 ✓';
+  setTimeout(function(){ el.textContent = original; }, 1500);
+}
+
+/* ================= 참여자 초대 ================= */
+function inviteMore(){
+  var code = document.querySelector('.invite-row .code').textContent;
+  alert('초대 코드 [' + code + ']를 공유해서 참여자를 초대하세요.\n(카카오톡 공유 등 실제 공유 기능은 백엔드/앱 연동 후 지원됩니다)');
+}
+
+/* ================= 로그인 / 회원가입 / 계정 ================= */
+function showAccountView(view){
+  document.getElementById('accountLogin').style.display = (view === 'login') ? 'block' : 'none';
+  document.getElementById('accountSignup').style.display = (view === 'signup') ? 'block' : 'none';
+  document.getElementById('accountInfo').style.display = (view === 'info') ? 'block' : 'none';
+}
+
+function applyAccountInfo(email, nickname){
+  var name = nickname && nickname.trim() ? nickname.trim() : (email.split('@')[0] || '사용자');
+  document.getElementById('accountGreeting').textContent = name + '님, 안녕하세요';
+  document.getElementById('accountNickname').textContent = name;
+  document.getElementById('accountEmail').textContent = email;
+  document.getElementById('accountAvatar').textContent = name.charAt(0);
+}
+
+function doLogin(){
+  var email = document.getElementById('loginEmail').value;
+  var pwd = document.getElementById('loginPwd').value;
+  if(email.trim() === ''){
+    alert('이메일을 입력하세요.');
+    document.getElementById('loginEmail').focus();
+    return;
+  }
+  if(pwd === ''){
+    alert('비밀번호를 입력하세요.');
+    document.getElementById('loginPwd').focus();
+    return;
+  }
+  // TODO: 백엔드(MyBatis) 로그인 API 연동 지점 — 지금은 입력값으로 바로 로그인 처리(목업)
+  applyAccountInfo(email, '');
+  showAccountView('info');
+}
+
+function doSignup(){
+  var email = document.getElementById('signupEmail').value;
+  var pwd = document.getElementById('signupPwd').value;
+  var pwdCheck = document.getElementById('signupPwdCheck').value;
+  var nickname = document.getElementById('signupNickname').value;
+
+  if(email.trim() === ''){
+    alert('이메일을 입력하세요.');
+    document.getElementById('signupEmail').focus();
+    return;
+  }
+  if(pwd === ''){
+    alert('비밀번호를 입력하세요.');
+    document.getElementById('signupPwd').focus();
+    return;
+  }
+  if(pwd !== pwdCheck){
+    alert('비밀번호가 일치하지 않습니다.');
+    document.getElementById('signupPwdCheck').focus();
+    return;
+  }
+  if(nickname.trim() === ''){
+    alert('닉네임을 입력하세요.');
+    document.getElementById('signupNickname').focus();
+    return;
+  }
+  // TODO: 백엔드(MyBatis) 회원가입 API 연동 지점 — 지금은 가입과 동시에 바로 로그인 처리(목업)
+  applyAccountInfo(email, nickname);
+  showAccountView('info');
+}
+
+function doLogout(){
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPwd').value = '';
+  document.getElementById('signupEmail').value = '';
+  document.getElementById('signupPwd').value = '';
+  document.getElementById('signupPwdCheck').value = '';
+  document.getElementById('signupNickname').value = '';
+  showAccountView('login');
+}
+
+/* ================= 출발지/목적지 교체 ================= */
+/* ================= 출발지/목적지/경유지 자동완성 (검색창 형태) ================= */
+// TODO: 지금은 목업 장소 목록이에요. 실제로는 여기서 TMAP 장소검색(POI) API를 호출해서
+//       입력한 글자에 맞는 실제 장소 목록을 받아와야 해요.
+var PLACE_SUGGESTIONS = [
+  '고려대학교', '고려대학교 정문', '고려대입구역',
+  '강남역 2번 출구', '강남역 3번 출구', '강남역 11번 출구',
+  '서울역', '서울역 KTX 승강장', '신촌역', '홍대입구역',
+  '인천국제공항 제1터미널', '인천국제공항 제2터미널',
+  '이마트 성수점', '신설동역', '안암오거리'
+];
+
+function showSuggestions(inputEl){
+  var listEl = document.getElementById(inputEl.id + 'List');
+  if(!listEl) return;
+
+  // 다른 입력칸에서 열려있던 목록은 먼저 닫기 (중복으로 겹쳐 뜨는 문제 방지)
+  document.querySelectorAll('.autocomplete-list').forEach(function(el){
+    if(el !== listEl){
+      el.classList.remove('show');
+      el.innerHTML = '';
+    }
+  });
+
+  var q = inputEl.value.trim();
+  var matches = q === ''
+    ? PLACE_SUGGESTIONS.slice(0, 5)
+    : PLACE_SUGGESTIONS.filter(function(p){ return p.indexOf(q) !== -1; }).slice(0, 5);
+
+  if(matches.length === 0){
+    listEl.classList.remove('show');
+    listEl.innerHTML = '';
+    return;
+  }
+  listEl.innerHTML = matches.map(function(p){
+    return '<div class="autocomplete-item" onmousedown="selectSuggestion(\'' + inputEl.id + '\', \'' + p.replace(/'/g, "\\'") + '\')">' + p + '</div>';
+  }).join('');
+  listEl.classList.add('show');
+}
+
+function selectSuggestion(inputId, value){
+  document.getElementById(inputId).value = value;
+  hideAllSuggestions();
+}
+
+function hideAllSuggestions(){
+  document.querySelectorAll('.autocomplete-list').forEach(function(el){
+    el.classList.remove('show');
+    el.innerHTML = '';
+  });
+}
+
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.field-row') && !e.target.closest('.waypoint-row')){
+    hideAllSuggestions();
+  }
+});
+
+function swapFields(){
+  var origin = document.getElementById('originInput');
+  var dest = document.getElementById('destInput');
+  var tmp = origin.value;
+  origin.value = dest.value;
+  dest.value = tmp;
+}
+
+function addWaypoint(){
+  document.getElementById('waypointRow').style.display = 'flex';
+  document.getElementById('addWaypointLink').style.display = 'none';
+  document.getElementById('waypointInput').focus();
+}
+function removeWaypoint(){
+  document.getElementById('waypointRow').style.display = 'none';
+  document.getElementById('addWaypointLink').style.display = 'block';
+  document.getElementById('waypointInput').value = '';
+}
+
+function addMinutesToTime(timeStr, deltaMinutes){
+  var parts = timeStr.split(':');
+  var d = new Date(2000, 0, 1, parseInt(parts[0], 10), parseInt(parts[1], 10));
+  d.setMinutes(d.getMinutes() + deltaMinutes);
+  var hh = String(d.getHours()).padStart(2, '0');
+  var mm = String(d.getMinutes()).padStart(2, '0');
+  return hh + ':' + mm;
+}
+
+function runSearch(){
+  // TODO: 여기서 실제로는 TMAP 대중교통 요약정보 API를 호출해서
+  //       진짜 소요시간·환승 정보를 받아와야 해요. 지금은 대표 예시(46분, 지하철 2호선)로 고정.
+  var origin = document.getElementById('originInput').value.trim() || '출발지 미입력';
+  var dest = document.getElementById('destInput').value.trim() || '목적지 미입력';
+  var waypointVisible = document.getElementById('waypointRow').style.display !== 'none';
+  var waypoint = waypointVisible ? document.getElementById('waypointInput').value.trim() : '';
+  var purposeText = document.getElementById('purposeSelect').selectedOptions[0].textContent;
+  var tripTime = document.getElementById('tripTime').value || '19:00';
+  var isArrivalBased = document.querySelector('.segmented button.active').textContent.indexOf('도착') !== -1;
+
+  var MOCK_DURATION = 46; // 대표 예시 소요시간(분). 실제 연동 전까지는 고정값.
+  var departTime, arriveTime;
+  if(isArrivalBased){
+    arriveTime = tripTime;
+    departTime = addMinutesToTime(tripTime, -MOCK_DURATION);
+  }else{
+    departTime = tripTime;
+    arriveTime = addMinutesToTime(tripTime, MOCK_DURATION);
+  }
+
+  var odText = origin + ' → ' + dest + (waypoint ? ' (경유: ' + waypoint + ')' : '');
+  document.getElementById('routeOD').textContent = odText;
+  document.getElementById('resultDepartTime').textContent = departTime;
+  document.getElementById('resultArriveTime').textContent = arriveTime;
+  document.getElementById('detailDepartTime').textContent = departTime;
+  document.getElementById('detailArriveTime').textContent = arriveTime;
+  document.getElementById('routeSubText').textContent =
+    '지금 나가면 ' + MOCK_DURATION + '분 뒤 도착 · 지하철 2호선 · 목적: ' + purposeText;
+
+  // 지도 목업 라벨도 같이 반영
+  var mockLabels = document.querySelectorAll('#mapMockLayer text');
+  if(mockLabels.length >= 2){
+    mockLabels[0].textContent = origin;
+    mockLabels[1].textContent = dest;
+  }
+
+  document.getElementById('resultBlock').classList.add('show');
+  document.getElementById('recentSection').style.display = 'none';
+}
+function resetSearch(){
+  document.getElementById('resultBlock').classList.remove('show');
+  document.getElementById('recentSection').style.display = 'block';
+  closeDetail();
+}
+function openDetail(){
+  document.getElementById('detailPanel').classList.add('active');
+}
+function closeDetail(){
+  document.getElementById('detailPanel').classList.remove('active');
+}
+
+/* ================= TMAP 지도 연동 (SK Open API) ================= */
+var tmapInstance = null;
+
+// <head>의 script onload에서 호출되는 콜백
+function initTmap(){
+  try{
+    if(!window.Tmapv2){ throw new Error('Tmapv2 객체를 찾을 수 없어요'); }
+
+    var startPos = new Tmapv2.LatLng(37.5895, 127.0323); // 고려대학교 (예시 좌표)
+    var endPos   = new Tmapv2.LatLng(37.4979, 127.0276); // 강남역 (예시 좌표)
+
+    tmapInstance = new Tmapv2.Map('tmapDiv', {
+      center: startPos,
+      width: '100%',
+      height: '100%',
+      zoom: 13,
+      zoomControl: false
+    });
+
+    new Tmapv2.Marker({ position: startPos, map: tmapInstance, title: '고려대학교' });
+    new Tmapv2.Marker({ position: endPos, map: tmapInstance, title: '강남역' });
+
+    new Tmapv2.Polyline({
+      path: [startPos, endPos],
+      strokeColor: '#2D6A6A',
+      strokeWeight: 5,
+      map: tmapInstance
+    });
+
+    // 실제 지도가 준비됐으니 목업을 걷어냄
+    document.getElementById('tmapDiv').classList.add('ready');
+    document.getElementById('mapMockLayer').classList.add('hide');
+    hideApiStatus();
+  }catch(e){
+    showApiStatus('TMAP 지도 초기화에 실패했어요. &lt;head&gt;의 YOUR_TMAP_APP_KEY가 올바른지, openapi.sk.com에 이 도메인이 등록되어 있는지 확인해주세요.');
+  }
+}
+
+// 스크립트 자체가 로드되지 않은 경우 (네트워크 차단, 잘못된 appKey 등)
+function handleTmapScriptError(){
+  showApiStatus('TMAP 지도 스크립트를 불러오지 못했어요. appKey 또는 네트워크 연결 상태를 확인해주세요.');
+}
+
+function showApiStatus(msg){
+  var el = document.getElementById('apiStatus');
+  el.innerHTML = msg;
+  el.classList.add('show');
+}
+function hideApiStatus(){
+  document.getElementById('apiStatus').classList.remove('show');
+}
+
+// 스크립트가 아예 로드되지 않아 onload/onerror조차 못 받는 경우 대비한 안내
+setTimeout(function(){
+  if(!window.Tmapv2 || !tmapInstance){
+    if(!document.getElementById('apiStatus').classList.contains('show')){
+      showApiStatus('TMAP 지도가 아직 연결되지 않았어요. &lt;head&gt;의 YOUR_TMAP_APP_KEY를 발급받은 appKey로 바꾸고, 이 페이지를 실제 도메인(또는 localhost)에서 열어주세요. 지금은 목업 지도로 보여지고 있어요.');
+    }
+  }
+}, 3500);
+
+var mockZoomLevel = 1;
+function zoomMap(delta){
+  if(tmapInstance){
+    tmapInstance.setZoom(tmapInstance.getZoom() + delta);
+    return;
+  }
+  // 실제 지도가 없을 때는 목업 지도를 시각적으로 확대/축소
+  mockZoomLevel = Math.min(2, Math.max(0.6, mockZoomLevel + (delta > 0 ? 0.15 : -0.15)));
+  document.getElementById('mapMockLayer').style.transform = 'scale(' + mockZoomLevel + ')';
+}
+
+/* ================= 내 위치 표시 (브라우저 Geolocation API) ================= */
+function locateMe(){
+  if(!navigator.geolocation){
+    alert('이 브라우저는 위치 정보 기능을 지원하지 않아요.');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var lat = pos.coords.latitude;
+    var lng = pos.coords.longitude;
+    if(tmapInstance){
+      // 실제 TMAP 지도가 연결되어 있으면 내 위치로 지도 중심 이동
+      var myPos = new Tmapv2.LatLng(lat, lng);
+      tmapInstance.setCenter(myPos);
+      tmapInstance.setZoom(15);
+      new Tmapv2.Marker({ position: myPos, map: tmapInstance, title: '내 위치' });
+    }else{
+      // 목업 지도에서는 위치를 알아냈다는 걸 시각적으로만 표시
+      document.getElementById('myLocationMarker').style.display = 'block';
+    }
+  }, function(err){
+    alert('위치 정보를 가져올 수 없어요. 브라우저의 위치 접근 권한을 확인해주세요.');
+  });
+}
+
+/* ================= 내 주변 정류장 (data.go.kr 버스정류소정보, GPS 기반) ================= */
+var nearbyStopsVisible = false;
+function toggleNearbyStops(){
+  nearbyStopsVisible = !nearbyStopsVisible;
+  var layer = document.getElementById('nearbyStopsLayer');
+  var btn = document.getElementById('nearbyStopsBtn');
+  if(nearbyStopsVisible){
+    layer.classList.add('show');
+    btn.classList.add('active');
+    // TODO: 백엔드에 GPS 좌표 전달 → data.go.kr 버스정류소정보 API 결과를 받아
+    //       실제 정류장 마커로 교체 (지금은 목업 3개 위치만 표시)
+  }else{
+    layer.classList.remove('show');
+    btn.classList.remove('active');
+  }
+}
+
+/* ================= 긴급재난문자 배너 (data.go.kr) ================= */
+function closeDisasterBanner(){
+  document.getElementById('disasterBanner').style.display = 'none';
+}
+
+/* ================= 날짜/시간 제한 (과거 선택 불가, 최대 1년 뒤까지) ================= */
+function formatDateYMD(d){
+  var yyyy = d.getFullYear();
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return yyyy + '-' + mm + '-' + dd;
+}
+function formatTimeHM(d){
+  var hh = String(d.getHours()).padStart(2, '0');
+  var mm = String(d.getMinutes()).padStart(2, '0');
+  return hh + ':' + mm;
+}
+
+function updateWeekdayLabel(){
+  var dateInput = document.getElementById('tripDate');
+  var tag = document.getElementById('tripDateWeekday');
+  if(!dateInput.value){ tag.textContent = ''; return; }
+  var parts = dateInput.value.split('-').map(Number);
+  var d = new Date(parts[0], parts[1] - 1, parts[2]);
+  var days = ['일','월','화','수','목','금','토'];
+  tag.textContent = '(' + days[d.getDay()] + ')';
+}
+
+function validateTripDateTime(){
+  var dateInput = document.getElementById('tripDate');
+  var timeInput = document.getElementById('tripTime');
+  var now = new Date();
+  var todayStr = formatDateYMD(now);
+  var maxDate = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+  var maxStr = formatDateYMD(maxDate);
+
+  // 날짜가 오늘보다 과거면 오늘로, 1년 뒤보다 미래면 1년 뒤로 보정
+  if(dateInput.value < todayStr){
+    dateInput.value = todayStr;
+  }else if(dateInput.value > maxStr){
+    dateInput.value = maxStr;
+  }
+
+  // 선택한 날짜가 오늘이면, 시간은 현재 시간보다 과거로 설정 못하게 보정
+  if(dateInput.value === todayStr && timeInput.value < formatTimeHM(now)){
+    timeInput.value = formatTimeHM(now);
+  }
+
+  updateWeekdayLabel();
+}
+
+/* ================= 초기값 세팅 ================= */
+document.addEventListener('DOMContentLoaded', function(){
+  var dateInput = document.getElementById('tripDate');
+  if(dateInput){
+    var now = new Date();
+    var maxDate = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+    dateInput.value = formatDateYMD(now);
+    dateInput.min = formatDateYMD(now);
+    dateInput.max = formatDateYMD(maxDate);
+  }
+  validateTripDateTime();
+});
+</script>
+</body>
+</html>
