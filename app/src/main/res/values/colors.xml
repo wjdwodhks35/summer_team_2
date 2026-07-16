@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="navy">#1B1F3B</color>
+    <color name="navy_soft">#242A52</color>
+    <color name="teal">#2D6A6A</color>
+    <color name="mint">#3DDC97</color>
+    <color name="amber">#FFB627</color>
+    <color name="orange">#FF8C42</color>
+    <color name="coral">#FF6B57</color>
+    <color name="slate">#8B90A8</color>
+    <color name="bg_gray">#F5F6FB</color>
+    <color name="card_white">#FFFFFF</color>
+    <color name="line_gray">#E7E9F2</color>
+    <color name="text_primary">#1B1F3B</color>
+    <color name="text_muted">#6B7280</color>
+    <color name="text_placeholder">#B4B8CC</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

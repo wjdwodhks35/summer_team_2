@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_gray">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- 헤더 (네이비) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/navy"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="32dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="공공데이터 기반 출발시간 계산"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#9AA0C7"
+                android:letterSpacing="0.03" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="언제 출발해야\n딱 맞게 도착할까요?"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                android:layout_marginTop="8dp"
+                android:lineSpacingMultiplier="1.3" />
+        </LinearLayout>
+
+        <!-- 검색 카드 (헤더 위로 살짝 올라옴) -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="-14dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="@color/card_white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp">
+
+                <!-- 출발지 -->
+                <LinearLayout
+                    android:id="@+id/row_start"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/ripple_row">
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@android:drawable/ic_menu_mylocation"
+                        android:tint="@color/teal" />
+                    <TextView
+                        android:id="@+id/tv_start_location"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="출발지 입력"
+                        android:textColor="@color/text_placeholder"
+                        android:textSize="15sp"
+                        android:layout_marginStart="10dp" />
+                    <ImageView
+                        android:id="@+id/btn_swap"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@android:drawable/ic_menu_sort_by_size"
+                        android:tint="@color/teal"
+                        android:padding="4dp" />
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/line_gray" />
+
+                <!-- 목적지 -->
+                <LinearLayout
+                    android:id="@+id/row_end"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/ripple_row">
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@android:drawable/ic_menu_directions"
+                        android:tint="@color/navy" />
+                    <TextView
+                        android:id="@+id/tv_end_location"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="목적지 입력"
+                        android:textColor="@color/text_placeholder"
+                        android:textSize="15sp"
+                        android:layout_marginStart="10dp" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 시간 기준 토글 -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggle_time_type"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="14dp"
+            app:singleSelection="true"
+            app:selectionRequired="true">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_arrival_based"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:text="도착 시간 기준"
+                android:textSize="13sp"
+                app:strokeColor="@color/line_gray" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_departure_based"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:text="출발 시간 기준"
+                android:textSize="13sp"
+                app:strokeColor="@color/line_gray" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!-- 날짜/시간 선택 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="10dp"
+            android:weightSum="2">
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_date"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_white"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/line_gray">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:gravity="center">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="날짜" android:textSize="11sp" android:textColor="@color/slate" android:textStyle="bold" />
+                    <TextView android:id="@+id/tv_date" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="오늘" android:textSize="15sp" android:textStyle="bold" android:textColor="@color/navy" android:layout_marginTop="2dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_time"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_white"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/line_gray">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:gravity="center">
+                    <TextView android:id="@+id/tv_time_label" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="도착 시간" android:textSize="11sp" android:textColor="@color/slate" android:textStyle="bold" />
+                    <TextView android:id="@+id/tv_time" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="시간 선택" android:textSize="15sp" android:textStyle="bold" android:textColor="@color/navy" android:layout_marginTop="2dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <!-- 이동 목적 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="이동 목적"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/slate"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="10dp" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chip_group_purpose"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            app:singleSelection="true"
+            app:selectionRequired="true">
+            <com.google.android.material.chip.Chip android:id="@+id/chip_general" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="일반" style="@style/Widget.MaterialComponents.Chip.Choice" />
+            <com.google.android.material.chip.Chip android:id="@+id/chip_school" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="등교" style="@style/Widget.MaterialComponents.Chip.Choice" />
+            <com.google.android.material.chip.Chip android:id="@+id/chip_work" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="출근" style="@style/Widget.MaterialComponents.Chip.Choice" />
+            <com.google.android.material.chip.Chip android:id="@+id/chip_appointment" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="약속" style="@style/Widget.MaterialComponents.Chip.Choice" />
+            <com.google.android.material.chip.Chip android:id="@+id/chip_exam" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="시험" style="@style/Widget.MaterialComponents.Chip.Choice" />
+            <com.google.android.material.chip.Chip android:id="@+id/chip_interview" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="면접" style="@style/Widget.MaterialComponents.Chip.Choice" />
+            <com.google.android.material.chip.Chip android:id="@+id/chip_hospital" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="병원" style="@style/Widget.MaterialComponents.Chip.Choice" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- 길찾기 버튼 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_search"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="길찾기"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:backgroundTint="@color/amber"
+            android:textColor="@color/navy"
+            app:cornerRadius="14dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="16dp" />
+
+        <!-- 최근 검색 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="최근 검색"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/slate"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_recent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false"
+            android:layout_marginBottom="16dp" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

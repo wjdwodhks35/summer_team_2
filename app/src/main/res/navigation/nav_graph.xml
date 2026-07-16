@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/loginFragment">
+
+    <!-- ===== 인증 ===== -->
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.whentoleave.ui.auth.LoginFragment"
+        android:label="로그인"
+        tools:layout="@layout/fragment_login">
+        <action android:id="@+id/action_login_to_register"
+            app:destination="@id/registerFragment" />
+        <action android:id="@+id/action_login_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/registerFragment"
+        android:name="com.example.whentoleave.ui.auth.RegisterFragment"
+        android:label="회원가입"
+        tools:layout="@layout/fragment_register">
+        <action android:id="@+id/action_register_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+        <action android:id="@+id/action_register_to_login"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <!-- ===== 홈 탭 ===== -->
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.example.whentoleave.ui.home.HomeFragment"
+        android:label="홈"
+        tools:layout="@layout/fragment_home">
+        <action android:id="@+id/action_home_to_result"
+            app:destination="@id/resultFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/resultFragment"
+        android:name="com.example.whentoleave.ui.home.ResultFragment"
+        android:label="결과"
+        tools:layout="@layout/fragment_result">
+    </fragment>
+
+    <!-- ===== 대중교통 탭 ===== -->
+    <fragment
+        android:id="@+id/transitFragment"
+        android:name="com.example.whentoleave.ui.transit.TransitFragment"
+        android:label="대중교통"
+        tools:layout="@layout/fragment_transit" />
+
+    <!-- ===== 저장 탭 ===== -->
+    <fragment
+        android:id="@+id/savedFragment"
+        android:name="com.example.whentoleave.ui.saved.SavedFragment"
+        android:label="저장"
+        tools:layout="@layout/fragment_saved" />
+
+    <!-- ===== 방 탭 ===== -->
+    <fragment
+        android:id="@+id/roomFragment"
+        android:name="com.example.whentoleave.ui.room.RoomFragment"
+        android:label="방"
+        tools:layout="@layout/fragment_room">
+        <action android:id="@+id/action_room_to_dashboard"
+            app:destination="@id/roomDashboardFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/roomDashboardFragment"
+        android:name="com.example.whentoleave.ui.room.RoomDashboardFragment"
+        android:label="약속방 현황"
+        tools:layout="@layout/fragment_room_dashboard">
+    </fragment>
+
+    <!-- ===== 계정 탭 ===== -->
+    <fragment
+        android:id="@+id/accountFragment"
+        android:name="com.example.whentoleave.ui.account.AccountFragment"
+        android:label="계정"
+        tools:layout="@layout/fragment_account" />
+
+</navigation>
