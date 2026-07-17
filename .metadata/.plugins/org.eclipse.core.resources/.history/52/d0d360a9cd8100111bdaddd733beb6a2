@@ -1,0 +1,24 @@
+package com.example.todaydeparture.controller;
+
+import com.example.todaydeparture.dto.DepartureRecommendRequest;
+import com.example.todaydeparture.dto.DepartureRecommendResponse;
+import com.example.todaydeparture.service.DepartureRecommendService;
+import org.springframework.web.bind.annotation.*;
+
+import com.example.todaydeparture.dto.DepartureResultDetailDto;
+
+@RestController
+@RequestMapping("/api/departure")
+public class DepartureRecommendController {
+
+    private final DepartureRecommendService departureRecommendService;
+
+    public DepartureRecommendController(DepartureRecommendService departureRecommendService) {
+        this.departureRecommendService = departureRecommendService;
+    }
+
+    @PostMapping("/recommend")
+    public DepartureRecommendResponse recommend(@RequestBody DepartureRecommendRequest request) {
+        return departureRecommendService.recommend(request);
+    }
+}

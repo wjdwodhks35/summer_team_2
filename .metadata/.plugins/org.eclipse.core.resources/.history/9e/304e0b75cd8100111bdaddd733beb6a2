@@ -1,0 +1,27 @@
+package com.example.todaydeparture.mapper;
+
+import com.example.todaydeparture.dto.TripRequestInsertDto;
+import com.example.todaydeparture.dto.TripResultInsertDto;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.time.LocalDateTime;
+
+@Mapper
+public interface DepartureMapper {
+
+    Integer findPurposeBufferMinutes(@Param("purposeCode") String purposeCode);
+
+    int insertTripRequest(TripRequestInsertDto tripRequest);
+
+    int insertTripResult(TripResultInsertDto tripResult);
+
+    int insertNotification(
+            @Param("userId") Long userId,
+            @Param("tripResultId") Long tripResultId,
+            @Param("notificationType") String notificationType,
+            @Param("title") String title,
+            @Param("message") String message,
+            @Param("scheduledAt") LocalDateTime scheduledAt
+    );
+}

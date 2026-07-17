@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.todaydeparture.mapper.PurposeMapper">
+
+    <select id="findAllActive" resultType="com.example.todaydeparture.dto.PurposeBufferPolicyDto">
+        SELECT
+            purpose_code,
+            purpose_name,
+            default_buffer_minutes,
+            min_buffer_minutes,
+            max_buffer_minutes,
+            description,
+            is_active
+        FROM purpose_buffer_policies
+        WHERE is_active = 1
+        ORDER BY default_buffer_minutes ASC
+    </select>
+
+    <select id="findByPurposeCode" resultType="com.example.todaydeparture.dto.PurposeBufferPolicyDto">
+        SELECT
+            purpose_code,
+            purpose_name,
+            default_buffer_minutes,
+            min_buffer_minutes,
+            max_buffer_minutes,
+            description,
+            is_active
+        FROM purpose_buffer_policies
+        WHERE purpose_code = #{purposeCode}
+          AND is_active = 1
+    </select>
+
+</mapper>
