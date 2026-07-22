@@ -13,7 +13,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.team.whentoleave"
+        applicationId = "com.example.whentoleave"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -42,6 +42,12 @@ android {
 
     buildFeatures {
         viewBinding = true
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -72,8 +78,18 @@ dependencies {
     // GPS
     implementation("com.google.android.gms:play-services-location:21.2.0")
 
+    // T맵 SDK
+    implementation(files("libs/tmap-sdk-3.7.aar"))
+    implementation(files("libs/vsm-tmap-sdk-v2-eaa-2.0.14.aar"))
+
+    // T맵 SDK 의존성
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+
     // 토큰 암호화 저장
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    implementation("androidx.preference:preference-ktx:1.2.1")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -8,6 +8,6 @@ import retrofit2.http.POST
 
 interface TripApiService {
 
-    @POST("api/trips/calculate")
+    @POST("api/departure/recommend")
     suspend fun calculateTrip(@Body request: TripRequest): Response<TripResponse>
 }

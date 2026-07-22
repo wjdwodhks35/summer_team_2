@@ -49,7 +49,15 @@
         android:name="com.example.whentoleave.ui.home.ResultFragment"
         android:label="결과"
         tools:layout="@layout/fragment_result">
+        <action
+            android:id="@+id/action_result_to_map"
+            app:destination="@id/mapFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/mapFragment"
+        android:name="com.example.whentoleave.ui.home.MapFragment"
+        android:label="지도" />
 
     <!-- ===== 대중교통 탭 ===== -->
     <fragment
@@ -88,5 +96,10 @@
         android:name="com.example.whentoleave.ui.account.AccountFragment"
         android:label="계정"
         tools:layout="@layout/fragment_account" />
+
+    <fragment
+        android:id="@+id/mapFragment"
+        android:name="com.example.whentoleave.ui.home.MapFragment"
+        android:label="지도" />
 
 </navigation>

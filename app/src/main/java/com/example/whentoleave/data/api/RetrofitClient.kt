@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
 
     // TODO: 서버 주소 받으면 여기 교체
-    private const val BASE_URL = "http://YOUR_SERVER_IP:8080/"
+    private const val BASE_URL = "http://172.20.10.7:8080/"
 
     private var appContext: Context? = null
 
