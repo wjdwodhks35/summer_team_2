@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.todaydeparture.mapper.UserMapper">
+
+    <!-- 회원가입 -->
+    <insert id="insertUser" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (
+            email,
+            password_hash,
+            nickname,
+            preferred_transport
+        ) VALUES (
+            #{email},
+            #{passwordHash},
+            #{nickname},
+            #{preferredTransport}
+        )
+    </insert>
+
+    <!-- 이메일로 회원 정보 조회 (로그인 및 프로필용) -->
+    <select id="findByEmail" resultType="map">
+        SELECT 
+            id,
+            email,
+            password_hash AS passwordHash,
+            nickname,
+            default_start_location AS defaultStartLocation,
+            preferred_transport AS preferredTransport,
+            is_active AS isActive
+        FROM users
+        WHERE email = #{email} AND is_active = 1
+    </select>
+
+    <!-- 프로필 수정 -->
+    <update id="updateUserProfile">
+        UPDATE users
+        SET 
+            nickname = #{nickname},
+            default_start_location = #{defaultStartLocation},
+            preferred_transport = #{preferredTransport},
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+</mapper>
