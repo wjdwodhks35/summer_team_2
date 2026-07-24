@@ -87,7 +87,10 @@ class LoginFragment : Fragment() {
                     TokenManager.saveUserInfo(requireContext(), body.userId, body.nickname)
                     goHome()
                 } else {
-                    showError("이메일 또는 비밀번호가 올바르지 않습니다")
+                    when (response.code()) {
+                        401 -> showError("이메일 또는 비밀번호가 올바르지 않습니다")
+                        else -> showError("서버 오류가 발생했습니다 (${response.code()})")
+                    }
                 }
             } catch (e: Exception) {
                 showError("서버 연결에 실패했습니다. 네트워크를 확인해주세요")

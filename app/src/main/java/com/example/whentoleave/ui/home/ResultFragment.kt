@@ -1,13 +1,17 @@
 package com.example.whentoleave.ui.home
 
 import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.whentoleave.R
@@ -37,20 +41,21 @@ class ResultFragment : Fragment() {
         private const val TMAP_KEY   = "rVhf1vi1M79depsoEfcTa6qw8vfB1yPxcWqQHtTj"
         private const val ODSAY_KEY  = "flAySXBVOkP+HdOWTcDH/I9LRvbn4Wp5i28piQBuvPo"
         private const val PUBLIC_KEY = "2dc8847e3d266a050537367834b26158359b1f24b1b1fda048fe7f2424e63273"
+        private const val SEOUL_KEY  = "524a6371487265653739616d4a5559"
     }
 
     private var _binding: FragmentResultBinding? = null
     private val binding get() = _binding!!
 
     private val stackColors = listOf(
-        "#2D6A6A", "#8B90A8", "#FF6B57", "#3DDC97", "#FFB627", "#FF8C42", "#94A3B8"
+        "#2D6A6A", "#7C3AED", "#FF6B57", "#3DDC97", "#FFB627", "#FF8C42", "#1E40AF"
     )
     private val stackLabels = listOf(
         "기본 이동", "대기", "혼잡", "날씨", "교통", "목적", "개인"
     )
 
-    private var subwayLine    = 0
-    private var subwayStation = ""
+    // 경로 상 모든 지하철 구간 (호선번호, 탑승역)
+    private val subwaySegments = mutableListOf<Pair<Int, String>>()
 
     // ──────────────────────────────────────────────
     // Lifecycle
@@ -74,6 +79,7 @@ class ResultFragment : Fragment() {
         val purpose      = arguments?.getString("purpose")      ?: "GENERAL"
         val argStartLat  = arguments?.getDouble("startLat")     ?: 0.0
         val argStartLon  = arguments?.getDouble("startLon")     ?: 0.0
+        val timeType     = arguments?.getString("timeType")     ?: "ARRIVAL"
 
         binding.tvRouteSummary.text = "$startAddress → $endAddress"
 
@@ -122,7 +128,7 @@ class ResultFragment : Fragment() {
             val weather = weatherDef.await()
 
             withContext(Dispatchers.Main) {
-                applyUi(backend, odsay, weather, targetTime, targetDate)
+                applyUi(backend, odsay, weather, targetTime, targetDate, timeType)
             }
         }
     }
@@ -141,7 +147,8 @@ class ResultFragment : Fragment() {
         odsay: OdsayResult?,
         weather: WeatherResult,
         targetTime: String,
-        targetDate: String
+        targetDate: String,
+        timeType: String = "ARRIVAL"
     ) {
         binding.tvTransportInfo.text = odsay?.routeLabel ?: "대중교통"
         binding.tvSeatProb.text = "${estimateSeatProb(targetTime, targetDate)}%"
@@ -149,8 +156,8 @@ class ResultFragment : Fragment() {
 
         when {
             backend != null -> {
-                binding.tvDepartTime.text = backend.recommendedDepartureTime.take(5)
-                binding.tvArriveTime.text = backend.expectedArrivalTime.take(5)
+                binding.tvDepartTime.text = backend.recommendedDepartureTime.substringAfter("T").take(5)
+                binding.tvArriveTime.text = backend.expectedArrivalTime.substringAfter("T").take(5)
                 val total = backend.baseTravelMinutes + backend.totalBufferMinutes
                 binding.tvTravelTime.text = "${total}분"
                 val vals = listOf(
@@ -170,8 +177,13 @@ class ResultFragment : Fragment() {
                 val purposeBuf  = 3
                 val personalBuf = maxOf(0, 10 - weatherBuf - purposeBuf)
                 val total = odsay.totalTime + weatherBuf + purposeBuf + personalBuf
-                binding.tvDepartTime.text = calcDepartTime(targetTime, total)
-                binding.tvArriveTime.text = targetTime.take(5)
+                if (timeType == "DEPARTURE") {
+                    binding.tvDepartTime.text = targetTime.take(5)
+                    binding.tvArriveTime.text = calcArriveTime(targetTime, total)
+                } else {
+                    binding.tvDepartTime.text = calcDepartTime(targetTime, total)
+                    binding.tvArriveTime.text = targetTime.take(5)
+                }
                 binding.tvTravelTime.text = "${total}분"   // 버퍼 포함 총 시간
                 // vals 합 = total 이 되도록 구성 (0은 drawStackBar에서 제외됨)
                 val vals = listOf(odsay.totalTime, 0, 0, weatherBuf, 0, purposeBuf, personalBuf)
@@ -181,8 +193,13 @@ class ResultFragment : Fragment() {
                     else "대중교통 이동시간 ${odsay.totalTime}분 + 여유 ${weatherBuf + purposeBuf + personalBuf}분을 반영했습니다."
             }
             else -> {
-                binding.tvDepartTime.text = calcDepartTime(targetTime, 46)
-                binding.tvArriveTime.text = targetTime.take(5)
+                if (timeType == "DEPARTURE") {
+                    binding.tvDepartTime.text = targetTime.take(5)
+                    binding.tvArriveTime.text = calcArriveTime(targetTime, 46)
+                } else {
+                    binding.tvDepartTime.text = calcDepartTime(targetTime, 46)
+                    binding.tvArriveTime.text = targetTime.take(5)
+                }
                 binding.tvTravelTime.text = "46분"
                 val vals = listOf(30, 5, 5, 0, 3, 2, 1)
                 drawStackBar(vals, 46); drawLegend(vals)
@@ -260,7 +277,7 @@ class ResultFragment : Fragment() {
     // ──────────────────────────────────────────────
 
     data class OdsayResult(val routeLabel: String, val totalTime: Int,
-                           val line: Int, val station: String)
+                           val line: Int, val lineName: String, val station: String)
 
     private suspend fun fetchOdsay(
         sLat: Double, sLon: Double, eLat: Double, eLon: Double
@@ -292,28 +309,42 @@ class ResultFragment : Fragment() {
             for (i in 0 until subs.length()) {
                 val sp   = subs.getJSONObject(i)
                 val type = sp.optInt("trafficType", 3)
-                if (type == 3) continue
-                val lanes = sp.optJSONArray("lane") ?: continue
-                if (lanes.length() == 0) continue
-                val lane = lanes.getJSONObject(0)
+
                 when (type) {
-                    1 -> {
-                        val name = lane.optString("name", "")
-                        if (name.isNotEmpty()) parts.add(name)
-                        if (line == 0) {
-                            line    = name.replace("호선","").trim().toIntOrNull() ?: 0
-                            station = sp.optString("startName","")
+                    1 -> { // 지하철
+                        val laneObj    = sp.optJSONArray("lane")?.optJSONObject(0)
+                        val subwayCode = laneObj?.optInt("subwayCode", 0) ?: 0
+                        val laneName   = laneObj?.optString("name", "") ?: ""
+                        val lineNum = subwayCode.takeIf { it > 0 }
+                            ?: Regex("(\\d+)호선").find(laneName)?.groupValues?.get(1)?.toIntOrNull()
+                            ?: 0
+                        val displayName = if (lineNum > 0) "${lineNum}호선" else laneName
+                        if (displayName.isNotEmpty()) parts.add("🚇 $displayName")
+                        if (line == 0) line = lineNum
+                        if (lineNum > 0) {
+                            val st = sp.optString("startName","").removeSuffix("역")
+                            station = station.ifEmpty { st }
+                            subwaySegments.add(Pair(lineNum, st))
                         }
+                        Log.d(TAG, "지하철 subPath[$i]: subwayCode=$subwayCode, laneName=$laneName, lineNum=$lineNum, startName=${sp.optString("startName")}")
                     }
-                    2 -> {
-                        val no = lane.optString("busNo","")
-                        if (no.isNotEmpty()) parts.add("${no}번 버스")
+                    2 -> { // 버스
+                        val lanes = sp.optJSONArray("lane") ?: continue
+                        if (lanes.length() == 0) continue
+                        val no = lanes.getJSONObject(0).optString("busNo","")
+                        if (no.isNotEmpty()) parts.add("🚌 ${no}번")
+                    }
+                    3 -> { // 도보
+                        val walkMin = sp.optInt("sectionTime", 0)
+                        if (walkMin > 0) parts.add("🚶 ${walkMin}분")
                     }
                 }
             }
-            subwayLine = line; subwayStation = station
-            val label = parts.take(2).joinToString(" · ").ifBlank { "대중교통" }
-            OdsayResult(label, total, line, station)
+            // subwaySegments는 위에서 이미 채워짐
+            Log.d(TAG, "ODsay 파싱 결과: line=$line, station=$station, parts=$parts")
+            val label    = parts.joinToString(" → ").ifBlank { "대중교통" }
+            val lineName = if (line > 0) "${line}호선" else ""
+            OdsayResult(label, total, line, lineName, station)
         } catch (e: Exception) { Log.e(TAG, "ODsay 오류: ${e.message}"); null }
     }
 
@@ -422,6 +453,14 @@ class ResultFragment : Fragment() {
         return "%02d:%02d".format(t/60, t%60)
     }
 
+    private fun calcArriveTime(targetTime: String, minutesAfter: Int): String {
+        val p = targetTime.split(":")
+        val h = p.getOrNull(0)?.toIntOrNull() ?: 0
+        val m = p.getOrNull(1)?.toIntOrNull() ?: 0
+        val t = (h*60 + m + minutesAfter) % 1440
+        return "%02d:%02d".format(t/60, t%60)
+    }
+
     private fun drawStackBar(values: List<Int>, total: Int) {
         binding.stackBar.removeAllViews()
         if (total == 0) return
@@ -450,11 +489,156 @@ class ResultFragment : Fragment() {
         }
     }
 
+    // ──────────────────────────────────────────────
+    // 지하철 혼잡도 (서울 열린데이터광장 실시간 혼잡도)
+    // ──────────────────────────────────────────────
+
     private fun showCongestionDetail() {
-        val msg = if (subwayLine > 0)
-            "${subwayLine}호선 $subwayStation 역 기준\n앞쪽 칸(1~3호)이 상대적으로 여유롭습니다."
-        else "지하철 경로 정보가 없습니다."
-        Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+        if (subwaySegments.isEmpty()) {
+            Toast.makeText(requireContext(), "지하철 경로 정보가 없습니다.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (subwaySegments.size == 1) {
+            // 지하철 1개 구간 → 바로 조회
+            val (line, station) = subwaySegments[0]
+            loadAndShowCongestion(line, station)
+        } else {
+            // 지하철 여러 구간 → 선택 다이얼로그
+            val items = subwaySegments.map { (line, station) -> "${line}호선 (${station}역 탑승)" }.toTypedArray()
+            AlertDialog.Builder(requireContext())
+                .setTitle("혼잡도 확인할 호선 선택")
+                .setItems(items) { _, idx ->
+                    val (line, station) = subwaySegments[idx]
+                    loadAndShowCongestion(line, station)
+                }
+                .setNegativeButton("취소", null)
+                .show()
+        }
+    }
+
+    private fun loadAndShowCongestion(line: Int, station: String) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val data = fetchSubwayCongestion(line, station)
+            withContext(Dispatchers.Main) {
+                showCongestionDialog(line, station, data)
+            }
+        }
+    }
+
+    data class CarCongestion(
+        val trainNo: String,
+        val cars: List<Int>   // 1=여유 2=보통 3=혼잡 4=매우혼잡
+    )
+
+    private suspend fun fetchSubwayCongestion(line: Int, station: String): CarCongestion? =
+        withContext(Dispatchers.IO) {
+            try {
+                val cleanStation = station.removeSuffix("역")
+                val lineName = URLEncoder.encode("${line}호선", "UTF-8")
+                val stName   = URLEncoder.encode(cleanStation, "UTF-8")
+                val url = "http://openapi.seoul.go.kr:8088/$SEOUL_KEY/json/realtimeCongestion/1/5/$lineName/$stName/"
+                Log.d(TAG, "혼잡도 API 호출: line=${line}호선, station=$cleanStation")
+                val conn = URL(url).openConnection() as HttpURLConnection
+                conn.connectTimeout = 6000; conn.readTimeout = 6000
+                val code = conn.responseCode
+                Log.d(TAG, "혼잡도 HTTP 응답코드: $code")
+                if (code != 200) return@withContext simulateCongestion(line, station)
+
+                val body = conn.inputStream.bufferedReader(Charsets.UTF_8).readText()
+                Log.d(TAG, "혼잡도 응답: ${body.take(300)}")
+                val json = JSONObject(body)
+                // ERROR-500 or 인증키 오류 → 시뮬레이션으로 폴백
+                val resultCode = json.optJSONObject("RESULT")?.optString("CODE") ?: ""
+                if (resultCode.isNotEmpty()) {
+                    Log.w(TAG, "혼잡도 API 오류($resultCode) → 시뮬레이션 데이터 사용")
+                    return@withContext simulateCongestion(line, station)
+                }
+                val rows = json.optJSONObject("realtimeCongestion")
+                    ?.optJSONArray("row")
+                    ?: return@withContext simulateCongestion(line, station)
+                if (rows.length() == 0) return@withContext simulateCongestion(line, station)
+
+                val row     = rows.getJSONObject(0)
+                val trainNo = row.optString("TRAIN_NO", "")
+                val cars = (1..10).map { i ->
+                    row.optInt("CONGESTION_CAR$i", 0)
+                }.filter { it > 0 }
+                if (cars.isEmpty()) return@withContext simulateCongestion(line, station)
+                CarCongestion(trainNo, cars)
+            } catch (e: Exception) {
+                Log.e(TAG, "혼잡도 API 오류: ${e.message}")
+                simulateCongestion(line, station)
+            }
+        }
+
+    private fun simulateCongestion(line: Int, station: String): CarCongestion {
+        val h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        val isPeakHour = h in 7..9 || h in 17..20
+        val baseCongestion = when {
+            station.contains("강남") || station.contains("신도림") || station.contains("홍대") -> if (isPeakHour) 4 else 3
+            station.contains("서울역") || station.contains("잠실") -> if (isPeakHour) 3 else 2
+            else -> if (isPeakHour) 3 else 1
+        }
+        val cars = (1..10).map {
+            val offset = (Math.random() * 2 - 1).toInt()
+            (baseCongestion + offset).coerceIn(1, 4)
+        }
+        return CarCongestion("시뮬레이션", cars)
+    }
+
+    private fun showCongestionDialog(line: Int, station: String, data: CarCongestion?) {
+        val levelText = listOf("", "여유 🟢", "보통 🟡", "혼잡 🔴", "매우혼잡 🔴🔴")
+        val levelColor = listOf(0, 0xFF4CAF50.toInt(), 0xFFFFB300.toInt(),
+            0xFFE53935.toInt(), 0xFFB71C1C.toInt())
+
+        val ctx = requireContext()
+        val scroll = android.widget.ScrollView(ctx)
+        val container = android.widget.LinearLayout(ctx).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(48, 32, 48, 16)
+        }
+        scroll.addView(container)
+
+        if (data == null) return  // simulateCongestion으로 대체되어 null이 올 수 없음
+        run {
+            container.addView(android.widget.TextView(ctx).apply {
+                text = "🚇 ${line}호선 $station 역\n열차 ${data.trainNo}"
+                textSize = 15f; setTypeface(null, android.graphics.Typeface.BOLD)
+                setPadding(0, 0, 0, 16)
+            })
+
+            val minCongestion = data.cars.minOrNull() ?: 2
+            val bestCars = data.cars.mapIndexedNotNull { i, v -> if (v == minCongestion) i + 1 else null }
+
+            data.cars.forEachIndexed { i, level ->
+                val row = android.widget.LinearLayout(ctx).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    setPadding(0, 6, 0, 6)
+                }
+                row.addView(android.widget.TextView(ctx).apply {
+                    text = "${i + 1}칸"
+                    textSize = 14f; minWidth = 80
+                })
+                row.addView(android.widget.TextView(ctx).apply {
+                    text = levelText.getOrElse(level) { "정보없음" }
+                    textSize = 14f
+                    if (level in 1..4) setTextColor(levelColor[level])
+                })
+                if (bestCars.contains(i + 1)) {
+                    row.addView(android.widget.TextView(ctx).apply {
+                        text = " ← 추천"
+                        textSize = 12f; setTextColor(0xFF1976D2.toInt())
+                    })
+                }
+                container.addView(row)
+            }
+        }
+
+        androidx.appcompat.app.AlertDialog.Builder(ctx)
+            .setTitle("칸별 혼잡도")
+            .setView(scroll)
+            .setPositiveButton("닫기", null)
+            .show()
     }
 
     @Deprecated("Deprecated in Java")

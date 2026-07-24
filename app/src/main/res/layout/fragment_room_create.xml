@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F4F6FA">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="방 만들기"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#1B1F3B"
+            android:layout_marginBottom="24dp" />
+
+        <!-- 방 이름 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="방 이름"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="#555555"
+            android:layout_marginBottom="6dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:hint="예: 약속방, 강남 모임"
+            app:hintTextColor="#888888"
+            app:boxStrokeColor="#1B1F3B"
+            app:boxBackgroundColor="#FFFFFF">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_room_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:maxLines="1"
+                android:textColor="#1B1F3B"
+                android:textColorHint="#AAAAAA" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- 최종 목적지 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="최종 목적지"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="#555555"
+            android:layout_marginBottom="6dp" />
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_destination"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginBottom="20dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="#FFFFFF"
+            app:strokeColor="#BDBDBD"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/ic_menu_mylocation"
+                    android:tint="#888888"
+                    android:layout_marginEnd="10dp" />
+
+                <TextView
+                    android:id="@+id/tv_destination"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="목적지를 검색하세요"
+                    android:textSize="14sp"
+                    android:textColor="#AAAAAA" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 약속 날짜 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="약속 날짜"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="#555555"
+            android:layout_marginBottom="6dp" />
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_date"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginBottom="20dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="#FFFFFF"
+            app:strokeColor="#BDBDBD"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/ic_menu_today"
+                    android:tint="#888888"
+                    android:layout_marginEnd="10dp" />
+
+                <TextView
+                    android:id="@+id/tv_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="날짜 선택"
+                    android:textSize="14sp"
+                    android:textColor="#AAAAAA" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 약속 시간 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="약속 시간"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="#555555"
+            android:layout_marginBottom="6dp" />
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_time"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginBottom="32dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="#FFFFFF"
+            app:strokeColor="#BDBDBD"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/ic_menu_recent_history"
+                    android:tint="#888888"
+                    android:layout_marginEnd="10dp" />
+
+                <TextView
+                    android:id="@+id/tv_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="시간 선택"
+                    android:textSize="14sp"
+                    android:textColor="#AAAAAA" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 방 만들기 버튼 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_confirm_create"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="방 만들기"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:backgroundTint="#1B1F3B"
+            app:cornerRadius="14dp" />
+
+    </LinearLayout>
+</ScrollView>

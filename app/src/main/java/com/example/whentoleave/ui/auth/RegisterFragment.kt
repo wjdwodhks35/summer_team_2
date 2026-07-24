@@ -94,7 +94,10 @@ class RegisterFragment : Fragment() {
                     TokenManager.saveUserInfo(requireContext(), body.userId, body.nickname)
                     findNavController().navigate(R.id.action_register_to_home)
                 } else {
-                    showError("이미 사용 중인 이메일입니다")
+                    when (response.code()) {
+                        409 -> showError("이미 사용 중인 이메일입니다")
+                        else -> showError("서버 오류가 발생했습니다 (${response.code()})")
+                    }
                 }
             } catch (e: Exception) {
                 showError("서버 연결에 실패했습니다")

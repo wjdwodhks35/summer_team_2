@@ -12,7 +12,7 @@
         android:orientation="vertical"
         android:padding="28dp">
 
-        <!-- 뒤로가기 + 타이틀 -->
+        <!-- 뒤로가기 -->
         <TextView
             android:id="@+id/tv_back"
             android:layout_width="wrap_content"
@@ -23,15 +23,40 @@
             android:textStyle="bold"
             android:padding="4dp" />
 
+        <!-- 로고 + 앱 이름 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingTop="20dp"
+            android:paddingBottom="8dp">
+
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:src="@drawable/ic_plantime_logo"
+                android:contentDescription="PlanTime 로고" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PlanTime"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/navy"
+                android:layout_marginTop="10dp" />
+        </LinearLayout>
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="회원가입"
-            android:textSize="26sp"
+            android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="@color/navy"
             android:layout_marginTop="16dp"
-            android:layout_marginBottom="28dp" />
+            android:layout_marginBottom="20dp" />
 
         <!-- 닉네임 -->
         <com.google.android.material.textfield.TextInputLayout

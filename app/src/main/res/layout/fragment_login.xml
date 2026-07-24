@@ -24,18 +24,16 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
-            <TextView
+            <ImageView
                 android:layout_width="72dp"
                 android:layout_height="72dp"
-                android:background="@drawable/bg_rounded_amber"
-                android:gravity="center"
-                android:text="🕐"
-                android:textSize="32sp" />
+                android:src="@drawable/ic_plantime_logo"
+                android:contentDescription="PlanTime 로고" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="몇시에나가"
+                android:text="PlanTime"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:textColor="@color/navy"

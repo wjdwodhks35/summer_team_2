@@ -29,6 +29,13 @@ class MapFragment : Fragment() {
         private const val TAG = "MapFragment"
         private const val TMAP_KEY = "rVhf1vi1M79depsoEfcTa6qw8vfB1yPxcWqQHtTj"
         private const val ODSAY_KEY = "flAySXBVOkP+HdOWTcDH/I9LRvbn4Wp5i28piQBuvPo"
+
+        // 서울 지하철 표준 색상 (호선 번호 → hex)
+        private val SUBWAY_COLORS = mapOf(
+            1 to "#0052A4", 2 to "#009246", 3 to "#EF7C1C",
+            4 to "#00A5DE", 5 to "#996CAC", 6 to "#CD7C2F",
+            7 to "#747F00", 8 to "#E6186C", 9 to "#BDB092"
+        )
     }
 
     private var webView: WebView? = null
@@ -105,10 +112,22 @@ class MapFragment : Fragment() {
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 html, body, #map { width:100%; height:100%; }
+#legend {
+    position:absolute; bottom:24px; left:12px; z-index:1000;
+    background:rgba(255,255,255,0.93); border-radius:10px;
+    padding:10px 14px; box-shadow:0 2px 8px rgba(0,0,0,0.18);
+    display:none; min-width:110px;
+}
+#legend-title {
+    font-size:11px; font-weight:bold; color:#555; margin-bottom:6px;
+}
 </style>
 </head>
 <body>
 <div id="map"></div>
+<div id="legend">
+    <div id="legend-title">경로 안내</div>
+</div>
 <script>
 var map = L.map('map', { zoomControl: true }).setView([37.5666, 126.9782], 13);
 
@@ -155,6 +174,57 @@ function drawSegments(segmentsJson) {
         console.log("drawSegments 완료: " + segs.length + "개");
     } catch(e) {
         console.error("drawSegments 오류: " + e.message);
+    }
+}
+
+function drawLegend(legendJson) {
+    try {
+        var items = JSON.parse(legendJson);
+        var legend = document.getElementById('legend');
+        var title = document.getElementById('legend-title');
+        legend.innerHTML = '';
+        legend.appendChild(title);
+        items.forEach(function(item) {
+            var row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;margin:4px 0';
+            var bar = document.createElement('div');
+            bar.style.cssText = 'width:26px;height:5px;background:' + item.color
+                + ';border-radius:3px;margin-right:8px;flex-shrink:0';
+            var txt = document.createElement('span');
+            txt.textContent = item.label;
+            txt.style.cssText = 'font-size:12px;color:#222';
+            row.appendChild(bar); row.appendChild(txt);
+            legend.appendChild(row);
+        });
+        legend.style.display = items.length > 0 ? 'block' : 'none';
+    } catch(e) {
+        console.error("drawLegend 오류: " + e.message);
+    }
+}
+
+// 탑승 지점 마커 (버스 번호 / 지하철 호선 표시)
+function drawBoardingMarkers(markersJson) {
+    try {
+        var markers = JSON.parse(markersJson);
+        markers.forEach(function(m) {
+            var icon = L.divIcon({
+                html: '<div style="'
+                    + 'background:' + m.color + ';'
+                    + 'color:white;font-size:10px;font-weight:bold;'
+                    + 'padding:3px 7px;border-radius:12px;'
+                    + 'white-space:nowrap;border:2px solid white;'
+                    + 'box-shadow:0 2px 5px rgba(0,0,0,0.4);'
+                    + 'cursor:default'
+                    + '">' + m.label + '</div>',
+                iconSize: null,
+                className: ''
+            });
+            L.marker([m.lat, m.lon], { icon: icon })
+                .addTo(map)
+                .bindTooltip(m.tooltip || m.label, { direction: 'top', offset: [0, -8] });
+        });
+    } catch(e) {
+        console.error("drawBoardingMarkers 오류: " + e.message);
     }
 }
 </script>
@@ -246,7 +316,8 @@ function drawSegments(segmentsJson) {
         startLat: Double, startLon: Double,
         endLat: Double,   endLon: Double
     ) {
-        data class Seg(val type: Int, val pts: List<Pair<Double, Double>>)
+        data class Seg(val type: Int, val pts: List<Pair<Double, Double>>,
+                       val color: String, val label: String)
 
         val segments: List<Seg> = withContext(Dispatchers.IO) {
             try {
@@ -267,6 +338,30 @@ function drawSegments(segmentsJson) {
                 for (i in 0 until subPaths.length()) {
                     val sp   = subPaths.getJSONObject(i)
                     val type = sp.optInt("trafficType", 3)
+
+                    // ── 호선/버스 정보 파싱 ──
+                    val laneObj    = sp.optJSONArray("lane")?.optJSONObject(0)
+                    val subwayCode = laneObj?.optInt("subwayCode", 0) ?: 0
+                    val laneName   = laneObj?.optString("name", "") ?: ""
+                    val busNo      = laneObj?.optString("busNo", "") ?: ""
+
+                    val lineNum = subwayCode.takeIf { it > 0 }
+                        ?: Regex("(\\d+)호선").find(laneName)?.groupValues?.get(1)?.toIntOrNull()
+                        ?: 0
+
+                    val color = when (type) {
+                        1 -> SUBWAY_COLORS[lineNum] ?: "#1e64ff"
+                        2 -> "#ff8200"
+                        else -> "#909090"
+                    }
+                    val label = when (type) {
+                        1 -> if (lineNum > 0) "${lineNum}호선" else laneName.ifEmpty { "지하철" }
+                        2 -> if (busNo.isNotEmpty()) "${busNo}번" else "버스"
+                        else -> "도보"
+                    }
+                    Log.d(TAG, "구간[$i] type=$type lineNum=$lineNum busNo=$busNo color=$color")
+
+                    // ── 좌표 파싱 ──
                     val pts  = mutableListOf<Pair<Double, Double>>()
                     val ls   = sp.optJSONObject("passShape")?.optString("linestring") ?: ""
                     if (ls.isNotEmpty()) {
@@ -297,21 +392,57 @@ function drawSegments(segmentsJson) {
                             }
                         }
                     }
-                    Log.d(TAG, "구간[$i] type=$type ${pts.size}점")
-                    if (pts.size >= 2) list.add(Seg(type, pts))
+                    if (pts.size >= 2) list.add(Seg(type, pts, color, label))
                 }
                 list
             } catch (e: Exception) { Log.e(TAG, "ODsay 오류: ${e.message}"); emptyList() }
         }
         if (segments.isEmpty()) return
 
+        // 폴리라인 배열
         val arr = JSONArray()
         for (seg in segments) {
-            val color = when (seg.type) { 1 -> "#1e64ff"; 2 -> "#ff8200"; else -> "#909090" }
             val width = if (seg.type == 3) 3 else 6
-            arr.put(buildSegmentJson(seg.pts, color, width))
+            arr.put(buildSegmentJson(seg.pts, seg.color, width))
         }
-        withContext(Dispatchers.Main) { jsEval("drawSegments('${escape(arr.toString())}')") }
+
+        // 범례 배열 (도보 제외, 중복 제외)
+        val legendArr = JSONArray()
+        val seen = mutableSetOf<String>()
+        for (seg in segments) {
+            if (seg.type == 3) continue
+            if (seen.contains(seg.label)) continue
+            seen.add(seg.label)
+            legendArr.put(JSONObject().put("label", seg.label).put("color", seg.color))
+        }
+
+        // 탑승 지점 마커 (버스/지하철 노선 번호를 지도에 표시)
+        val boardingArr = JSONArray()
+        for (seg in segments) {
+            if (seg.type == 3) continue   // 도보 제외
+            if (seg.pts.isEmpty()) continue
+            val (lat, lon) = seg.pts.first()
+            val tooltip = when (seg.type) {
+                1 -> "${seg.label} 탑승"
+                2 -> "${seg.label}번 버스 탑승"
+                else -> seg.label
+            }
+            boardingArr.put(
+                JSONObject()
+                    .put("lat", lat).put("lon", lon)
+                    .put("label", seg.label)
+                    .put("color", seg.color)
+                    .put("tooltip", tooltip)
+            )
+        }
+
+        withContext(Dispatchers.Main) {
+            jsEval("drawSegments('${escape(arr.toString())}')")
+            jsEval("drawLegend('${escape(legendArr.toString())}')")
+            if (boardingArr.length() > 0) {
+                jsEval("drawBoardingMarkers('${escape(boardingArr.toString())}')")
+            }
+        }
     }
 
     // ──────────────────────────────────────────────

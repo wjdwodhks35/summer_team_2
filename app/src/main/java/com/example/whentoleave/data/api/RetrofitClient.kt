@@ -11,8 +11,19 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    // TODO: 서버 주소 받으면 여기 교체
-    private const val BASE_URL = "http://172.20.10.7:8080/"
+    // 에뮬레이터에서는 10.0.2.2 = 호스트 PC. 실제 기기에서는 핫스팟 IP.
+    private val BASE_URL: String get() = if (isEmulator()) "http://10.0.2.2:8080/" else "http://172.20.10.7:8080/"
+
+    private fun isEmulator(): Boolean {
+        val fp = android.os.Build.FINGERPRINT
+        return fp.startsWith("generic") || fp.startsWith("unknown") ||
+               android.os.Build.MODEL.contains("google_sdk", ignoreCase = true) ||
+               android.os.Build.MODEL.contains("Emulator", ignoreCase = true) ||
+               android.os.Build.MODEL.contains("Android SDK", ignoreCase = true) ||
+               android.os.Build.MANUFACTURER.contains("Genymotion", ignoreCase = true) ||
+               android.os.Build.BRAND.startsWith("generic") ||
+               android.os.Build.DEVICE.startsWith("generic")
+    }
 
     private var appContext: Context? = null
 
@@ -41,11 +52,11 @@ object RetrofitClient {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    val instance: Retrofit by lazy {
-        Retrofit.Builder()
+    // lazy 제거: BASE_URL이 런타임에 결정되므로 매 접근 시 생성
+    val instance: Retrofit
+        get() = Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-    }
 }

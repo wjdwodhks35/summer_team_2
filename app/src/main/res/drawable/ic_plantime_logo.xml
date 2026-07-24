@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 웹 왼쪽 상단 아이콘과 동일한 PlanTime 로고 (amber 배경 + navy 다이아몬드) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="72dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Amber 둥근 배경 -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M3,3 Q3,0 6,0 L18,0 Q21,0 21,3 L21,21 Q21,24 18,24 L6,24 Q3,24 3,21 Z" />
+
+    <!-- 웹과 동일한 다이아몬드 경로 (navy, 선 굵기 효과를 위해 fillColor 사용) -->
+    <path
+        android:fillColor="#1B1F3B"
+        android:pathData="M12,4 L19.5,9 L12,21 L4.5,9 Z" />
+
+</vector>

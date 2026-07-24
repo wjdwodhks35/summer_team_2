@@ -136,7 +136,9 @@
                 android:layout_weight="1"
                 android:text="도착 시간 기준"
                 android:textSize="13sp"
-                app:strokeColor="@color/line_gray" />
+                android:textColor="@color/toggle_text_color"
+                app:backgroundTint="@color/toggle_bg_tint"
+                app:strokeColor="@color/navy" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_departure_based"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
@@ -145,7 +147,9 @@
                 android:layout_weight="1"
                 android:text="출발 시간 기준"
                 android:textSize="13sp"
-                app:strokeColor="@color/line_gray" />
+                android:textColor="@color/toggle_text_color"
+                app:backgroundTint="@color/toggle_bg_tint"
+                app:strokeColor="@color/navy" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <!-- 날짜/시간 선택 -->

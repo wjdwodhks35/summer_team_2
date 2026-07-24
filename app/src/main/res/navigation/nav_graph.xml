@@ -71,7 +71,11 @@
         android:id="@+id/savedFragment"
         android:name="com.example.whentoleave.ui.saved.SavedFragment"
         android:label="저장"
-        tools:layout="@layout/fragment_saved" />
+        tools:layout="@layout/fragment_saved">
+        <action
+            android:id="@+id/action_saved_to_result"
+            app:destination="@id/resultFragment" />
+    </fragment>
 
     <!-- ===== 방 탭 ===== -->
     <fragment
@@ -81,14 +85,17 @@
         tools:layout="@layout/fragment_room">
         <action android:id="@+id/action_room_to_dashboard"
             app:destination="@id/roomDashboardFragment" />
+        <action android:id="@+id/action_room_to_create"
+            app:destination="@id/roomCreateFragment"/>
+        <action android:id="@+id/action_room_to_join"
+            app:destination="@id/roomJoinFragment"/>
     </fragment>
 
     <fragment
         android:id="@+id/roomDashboardFragment"
         android:name="com.example.whentoleave.ui.room.RoomDashboardFragment"
         android:label="약속방 현황"
-        tools:layout="@layout/fragment_room_dashboard">
-    </fragment>
+        tools:layout="@layout/fragment_room_dashboard" />
 
     <!-- ===== 계정 탭 ===== -->
     <fragment
@@ -98,8 +105,19 @@
         tools:layout="@layout/fragment_account" />
 
     <fragment
-        android:id="@+id/mapFragment"
-        android:name="com.example.whentoleave.ui.home.MapFragment"
-        android:label="지도" />
+        android:id="@+id/roomCreateFragment"
+        android:name="com.example.whentoleave.ui.room.RoomCreateFragment"
+        android:label="방 만들기"
+        tools:layout="@layout/fragment_room_create">
+        <action android:id="@+id/action_roomCreate_to_dashboard" app:destination="@id/roomDashboardFragment"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/roomJoinFragment"
+        android:name="com.example.whentoleave.ui.room.RoomJoinFragment"
+        android:label="방 참여"
+        tools:layout="@layout/fragment_room_join">
+        <action android:id="@+id/action_roomJoin_to_dashboard" app:destination="@id/roomDashboardFragment"/>
+    </fragment>
 
 </navigation>

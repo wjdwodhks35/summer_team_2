@@ -14,133 +14,166 @@
         android:padding="20dp"
         android:orientation="vertical">
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="대중교통" android:textSize="11sp" android:textStyle="bold"
+            android:text="대중교통 혼잡도" android:textSize="11sp" android:textStyle="bold"
             android:textColor="#9AA0C7" android:letterSpacing="0.03" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:text="어느 칸에 탈까요?" android:textSize="20sp" android:textStyle="bold"
             android:textColor="@color/white" android:layout_marginTop="6dp" />
     </LinearLayout>
 
-    <!-- 역 선택 -->
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_margin="16dp"
-        android:weightSum="2">
-
-        <Spinner android:id="@+id/spinner_station"
-            android:layout_width="0dp" android:layout_height="48dp"
-            android:layout_weight="1" android:layout_marginEnd="8dp"
-            android:background="@drawable/bg_spinner"
-            android:paddingStart="12dp" android:textSize="14sp" />
-
-        <Spinner android:id="@+id/spinner_line"
-            android:layout_width="0dp" android:layout_height="48dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_spinner"
-            android:paddingStart="12dp" android:textSize="14sp" />
-    </LinearLayout>
-
-    <!-- 혼잡도 카드 -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        app:cardCornerRadius="14dp"
-        app:cardElevation="0dp"
-        app:cardBackgroundColor="@color/card_white"
-        app:strokeWidth="1dp"
-        app:strokeColor="@color/line_gray">
+        android:layout_height="match_parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
 
-            <!-- 호선 배지 + 제목 -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
-                <TextView android:id="@+id/tv_line_badge"
-                    android:layout_width="30dp" android:layout_height="30dp"
-                    android:text="2" android:textSize="12sp" android:textStyle="bold"
-                    android:textColor="@color/white" android:gravity="center"
-                    android:background="@drawable/bg_line_badge" />
-                <TextView android:id="@+id/tv_subway_title"
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="지하철 2호선 · 강남역"
-                    android:textSize="14sp" android:textStyle="bold" android:textColor="@color/navy"
-                    android:layout_marginStart="10dp" />
-            </LinearLayout>
-
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="칸별 혼잡도 (최근 7일 평균)"
-                android:textSize="11sp" android:textStyle="bold" android:textColor="@color/slate"
-                android:layout_marginBottom="8dp" />
-
-            <!-- 칸 색상 바 (RecyclerView) -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_cars"
+            <!-- ① 호선 선택 -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="36dp"
-                android:nestedScrollingEnabled="false" />
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_margin="16dp">
 
-            <!-- 호 번호 표시 -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:layout_marginTop="4dp">
-                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:text="1호" android:textSize="9sp" android:textColor="@color/slate" android:textStyle="bold" />
-                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:text="5호" android:textSize="9sp" android:textColor="@color/slate" android:textStyle="bold" android:gravity="center" />
-                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:text="10호" android:textSize="9sp" android:textColor="@color/slate" android:textStyle="bold" android:gravity="end" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="① 호선 선택"
+                    android:textSize="12sp" android:textStyle="bold" android:textColor="@color/slate"
+                    android:layout_marginBottom="6dp" />
+
+                <Spinner android:id="@+id/spinner_line"
+                    android:layout_width="match_parent" android:layout_height="52dp"
+                    android:background="@drawable/bg_spinner"
+                    android:paddingStart="14dp" android:textSize="15sp" />
             </LinearLayout>
 
-            <!-- 범례 -->
-            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:layout_marginTop="8dp">
-                <View android:layout_width="8dp" android:layout_height="8dp" android:background="@color/mint" android:layout_marginEnd="4dp" android:layout_gravity="center_vertical" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="여유  " android:textSize="10sp" android:textColor="@color/slate" android:textStyle="bold" />
-                <View android:layout_width="8dp" android:layout_height="8dp" android:background="@color/amber" android:layout_marginEnd="4dp" android:layout_gravity="center_vertical" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="보통  " android:textSize="10sp" android:textColor="@color/slate" android:textStyle="bold" />
-                <View android:layout_width="8dp" android:layout_height="8dp" android:background="@color/coral" android:layout_marginEnd="4dp" android:layout_gravity="center_vertical" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="혼잡" android:textSize="10sp" android:textColor="@color/slate" android:textStyle="bold" />
+            <!-- ② 역 선택 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="② 역 선택"
+                    android:textSize="12sp" android:textStyle="bold" android:textColor="@color/slate"
+                    android:layout_marginBottom="6dp" />
+
+                <Spinner android:id="@+id/spinner_station"
+                    android:layout_width="match_parent" android:layout_height="52dp"
+                    android:background="@drawable/bg_spinner"
+                    android:paddingStart="14dp" android:textSize="15sp" />
             </LinearLayout>
 
-            <!-- 앉을 확률 -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:layout_marginTop="14dp"
-                android:paddingTop="12dp"
-                android:background="@drawable/border_top">
-                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:text="앉아서 갈 확률 (최근 7일 평균)"
-                    android:textSize="12sp" android:textColor="@color/slate" android:textStyle="bold"
-                    android:gravity="center_vertical" />
-                <TextView android:id="@+id/tv_seat_probability"
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="62%" android:textSize="18sp" android:textStyle="bold" android:textColor="@color/mint" />
+            <!-- 혼잡도 카드 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_white"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/line_gray">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- 호선 배지 + 제목 -->
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+                        <TextView android:id="@+id/tv_line_badge"
+                            android:layout_width="30dp" android:layout_height="30dp"
+                            android:text="2" android:textSize="12sp" android:textStyle="bold"
+                            android:textColor="@color/white" android:gravity="center"
+                            android:background="@drawable/bg_line_badge" />
+                        <TextView android:id="@+id/tv_subway_title"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="지하철 2호선 · 강남역"
+                            android:textSize="14sp" android:textStyle="bold" android:textColor="@color/navy"
+                            android:layout_marginStart="10dp" />
+                    </LinearLayout>
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="칸별 혼잡도 (시뮬레이션 데이터)"
+                        android:textSize="11sp" android:textStyle="bold" android:textColor="@color/slate"
+                        android:layout_marginBottom="8dp" />
+
+                    <!-- 칸 색상 바 -->
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rv_cars"
+                        android:layout_width="match_parent"
+                        android:layout_height="36dp"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never" />
+
+                    <!-- 호 번호 표시 -->
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:layout_marginTop="4dp">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="1호" android:textSize="9sp" android:textColor="@color/slate" android:textStyle="bold" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="5호" android:textSize="9sp" android:textColor="@color/slate" android:textStyle="bold" android:gravity="center" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="10호" android:textSize="9sp" android:textColor="@color/slate" android:textStyle="bold" android:gravity="end" />
+                    </LinearLayout>
+
+                    <!-- 범례 -->
+                    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:layout_marginTop="8dp">
+                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@color/mint" android:layout_marginEnd="4dp" android:layout_gravity="center_vertical" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="여유  " android:textSize="10sp" android:textColor="@color/slate" android:textStyle="bold" />
+                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@color/amber" android:layout_marginEnd="4dp" android:layout_gravity="center_vertical" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="보통  " android:textSize="10sp" android:textColor="@color/slate" android:textStyle="bold" />
+                        <View android:layout_width="8dp" android:layout_height="8dp" android:background="@color/coral" android:layout_marginEnd="4dp" android:layout_gravity="center_vertical" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="혼잡" android:textSize="10sp" android:textColor="@color/slate" android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- 앉을 확률 -->
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:layout_marginTop="14dp"
+                        android:paddingTop="12dp"
+                        android:background="@drawable/border_top">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="앉아서 갈 확률"
+                            android:textSize="12sp" android:textColor="@color/slate" android:textStyle="bold"
+                            android:gravity="center_vertical" />
+                        <TextView android:id="@+id/tv_seat_probability"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="62%" android:textSize="18sp" android:textStyle="bold" android:textColor="@color/mint" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 추천 안내 박스 -->
+            <LinearLayout
+                android:id="@+id/recommend_box"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/bg_info_box"
+                android:padding="14dp">
+                <TextView android:id="@+id/tv_recommend_cars"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="💡 호선과 역을 선택하면 추천 칸을 안내해 드립니다."
+                    android:textSize="13sp"
+                    android:textColor="#1B4F72"
+                    android:lineSpacingMultiplier="1.4" />
             </LinearLayout>
+
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- 추천 안내 박스 -->
-    <LinearLayout
-        android:id="@+id/recommend_box"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:background="@drawable/bg_info_box"
-        android:padding="14dp">
-        <TextView android:id="@+id/tv_recommend_cars"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="💡 1, 2, 7, 8, 10호 칸이 가장 여유로워요. 특히 앞쪽 칸(1~2호)을 추천합니다."
-            android:textSize="13sp"
-            android:textColor="#1B4F72"
-            android:lineSpacingMultiplier="1.4" />
-    </LinearLayout>
+    </ScrollView>
 
 </LinearLayout>
