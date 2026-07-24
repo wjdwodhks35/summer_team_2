@@ -1,0 +1,4122 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>출발시간 추천 서비스 - 웹 디자인</title>
+	<style>
+		:root {
+			--navy: #1B1F3B;
+			--navy-soft: #242A52;
+			--teal: #2D6A6A;
+			--mint: #3DDC97;
+			--amber: #FFB627;
+			--orange: #FF8C42;
+			--coral: #FF6B57;
+			--severe: #D6304A;
+			--slate: #8B90A8;
+			--bg: #F5F6FB;
+			--card: #FFFFFF;
+			--ink: #1B1F3B;
+			--muted: #6B7280;
+			--line: #E7E9F2;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		html,
+		body {
+			height: 100%;
+			margin: 0;
+			font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Pretendard", sans-serif;
+			color: var(--ink);
+			background: var(--bg);
+		}
+
+		.app {
+			display: flex;
+			height: calc(100vh - 44px);
+			width: 100%;
+			overflow: hidden;
+			position: relative;
+		}
+
+		/* ================= 긴급재난문자 배너 ================= */
+		.disaster-banner {
+			height: 44px;
+			background: #FFF3E0;
+			border-bottom: 1px solid #FFD08A;
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			padding: 0 18px;
+			font-size: 12.5px;
+			font-weight: 600;
+			color: #8A5A00;
+		}
+
+		.disaster-banner svg {
+			width: 18px;
+			height: 18px;
+			stroke: #D97706;
+			fill: none;
+			stroke-width: 1.8;
+			flex-shrink: 0;
+		}
+
+		.disaster-banner span {
+			flex: 1;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		.disaster-close {
+			width: 22px;
+			height: 22px;
+			border-radius: 50%;
+			flex-shrink: 0;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.disaster-close:hover {
+			background: #FFE3AD;
+		}
+
+		.disaster-close svg {
+			width: 11px;
+			height: 11px;
+			stroke: #8A5A00;
+			stroke-width: 2.2;
+		}
+
+		/* ================= LEFT ICON RAIL ================= */
+		.rail {
+			width: 84px;
+			flex-shrink: 0;
+			background: var(--navy);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			padding: 20px 0;
+		}
+
+		.rail-logo {
+			width: 38px;
+			height: 38px;
+			border-radius: 11px;
+			background: var(--amber);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin-bottom: 22px;
+			flex-shrink: 0;
+		}
+
+		.rail-logo svg {
+			width: 20px;
+			height: 20px;
+			stroke: var(--navy);
+			stroke-width: 2.4;
+			fill: none;
+		}
+
+		.rail-item {
+			width: 100%;
+			background: none;
+			border: none;
+			cursor: pointer;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 6px;
+			padding: 12px 4px;
+			color: #9AA0C7;
+			font-size: 11px;
+			font-weight: 700;
+			font-family: inherit;
+		}
+
+		.rail-item svg {
+			width: 21px;
+			height: 21px;
+			stroke: #9AA0C7;
+			fill: none;
+			stroke-width: 1.8;
+		}
+
+		.rail-item.active {
+			color: #fff;
+			background: rgba(255, 255, 255, 0.06);
+		}
+
+		.rail-item.active svg {
+			stroke: var(--amber);
+		}
+
+		.rail-item:hover {
+			color: #fff;
+		}
+
+		.rail-spacer {
+			flex: 1;
+		}
+
+		/* ================= LEFT PANEL(S) ================= */
+		.panel {
+			width: 400px;
+			flex-shrink: 0;
+			background: var(--card);
+			height: 100%;
+			overflow-y: auto;
+			border-right: 1px solid var(--line);
+			display: none;
+			padding: 22px 22px 40px;
+			transition: width .25s ease, padding .25s ease;
+		}
+
+		.panel.active {
+			display: block;
+		}
+
+		.panel.collapsed {
+			width: 0 !important;
+			padding-left: 0;
+			padding-right: 0;
+			overflow: hidden;
+			border-right: none;
+		}
+
+		.panel-toggle {
+			position: absolute;
+			top: 50%;
+			left: 484px;
+			transform: translate(-50%, -50%);
+			width: 22px;
+			height: 64px;
+			background: var(--card);
+			border: 1.5px solid var(--line);
+			border-radius: 12px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			box-shadow: 0 6px 16px -6px rgba(27, 31, 59, 0.3);
+			z-index: 6;
+			transition: left .25s ease;
+		}
+
+		.panel-toggle svg {
+			width: 11px;
+			height: 11px;
+			stroke: var(--navy);
+			stroke-width: 2.4;
+			fill: none;
+			transition: transform .25s ease;
+		}
+
+		.panel-toggle.collapsed svg {
+			transform: rotate(180deg);
+		}
+
+		.eyebrow {
+			font-size: 12px;
+			font-weight: 700;
+			color: var(--teal);
+			letter-spacing: 0.02em;
+		}
+
+		.h1 {
+			font-size: 21px;
+			font-weight: 800;
+			margin: 6px 0 20px;
+			line-height: 1.35;
+		}
+
+		.search-card {
+			background: var(--bg);
+			border-radius: 16px;
+			padding: 6px 14px;
+		}
+
+		.field-row {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			padding: 13px 0;
+			border-bottom: 1px solid var(--line);
+			position: relative;
+		}
+
+		.field-row:last-of-type {
+			border-bottom: none;
+		}
+
+		.autocomplete-list {
+			display: none;
+			position: absolute;
+			top: calc(100% - 4px);
+			left: 36px;
+			right: 0;
+			z-index: 15;
+			background: var(--card);
+			border: 1px solid var(--line);
+			border-radius: 12px;
+			box-shadow: 0 12px 24px -12px rgba(27, 31, 59, 0.35);
+			overflow: hidden;
+			max-height: 220px;
+			overflow-y: auto;
+		}
+
+		.autocomplete-list.show {
+			display: block;
+		}
+
+		.autocomplete-item {
+			padding: 11px 14px;
+			font-size: 13.5px;
+			font-weight: 600;
+			color: var(--ink);
+			cursor: pointer;
+			border-bottom: 1px solid var(--line);
+		}
+
+		.autocomplete-item .place-name {
+			display: flex;
+			align-items: center;
+			gap: 7px;
+			font-size: 13.5px;
+			font-weight: 800;
+		}
+
+		.autocomplete-item .place-category {
+			margin-left: auto;
+			font-size: 10.5px;
+			font-weight: 600;
+			color: var(--slate);
+		}
+
+		.autocomplete-item .place-address {
+			margin: 4px 0 0 21px;
+			font-size: 11.5px;
+			font-weight: 500;
+			color: var(--muted);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.autocomplete-state {
+			padding: 14px;
+			font-size: 12px;
+			font-weight: 600;
+			color: var(--slate);
+		}
+
+		.autocomplete-item:last-child {
+			border-bottom: none;
+		}
+
+		.autocomplete-item:hover {
+			background: var(--bg);
+		}
+
+		.field-icon {
+			width: 26px;
+			height: 26px;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: var(--card);
+			flex-shrink: 0;
+		}
+
+		.field-icon svg {
+			width: 14px;
+			height: 14px;
+			stroke: var(--navy);
+			fill: none;
+			stroke-width: 2;
+		}
+
+		.field-row input {
+			border: none;
+			outline: none;
+			font-size: 15px;
+			font-weight: 600;
+			color: var(--ink);
+			width: 100%;
+			background: transparent;
+			font-family: inherit;
+		}
+
+		.field-row input::placeholder {
+			color: #B4B8CC;
+			font-weight: 500;
+		}
+
+		.od-fields {
+			position: relative;
+		}
+
+		.swap-btn-main {
+			position: absolute;
+			top: 50%;
+			right: 2px;
+			transform: translateY(-50%);
+			width: 26px;
+			height: 26px;
+			border-radius: 50%;
+			background: var(--card);
+			border: 1px solid var(--line);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			flex-shrink: 0;
+			box-shadow: 0 2px 6px -2px rgba(27, 31, 59, 0.25);
+		}
+
+		.swap-btn-main svg {
+			width: 13px;
+			height: 13px;
+			stroke: var(--teal);
+			stroke-width: 2;
+			fill: none;
+		}
+
+		.swap-btn {
+			width: 26px;
+			height: 26px;
+			border-radius: 50%;
+			background: var(--card);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			flex-shrink: 0;
+		}
+
+		.swap-btn svg {
+			width: 13px;
+			height: 13px;
+			stroke: var(--teal);
+			stroke-width: 2;
+			fill: none;
+		}
+
+		.quick-row {
+			display: flex;
+			gap: 8px;
+			margin: 10px 0 4px;
+		}
+
+		.quick-row button {
+			flex: 1;
+			border: 1px solid var(--line);
+			background: var(--card);
+			border-radius: 10px;
+			padding: 9px 0;
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--muted);
+			cursor: pointer;
+			font-family: inherit;
+		}
+
+		.quick-row button:last-child {
+			background: var(--navy);
+			color: #fff;
+			border-color: var(--navy);
+		}
+
+		.waypoint-row {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			padding: 13px 0;
+			border-bottom: 1px solid var(--line);
+			position: relative;
+		}
+
+		.waypoint-row input {
+			border: none;
+			outline: none;
+			font-size: 15px;
+			font-weight: 600;
+			color: var(--ink);
+			width: 100%;
+			background: transparent;
+			font-family: inherit;
+		}
+
+		.waypoint-row input::placeholder {
+			color: #B4B8CC;
+			font-weight: 500;
+		}
+
+		.add-waypoint-link {
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--teal);
+			cursor: pointer;
+			padding: 10px 2px 4px;
+		}
+
+		.datetime-pill {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 6px;
+			background: var(--bg);
+			border-radius: 999px;
+			padding: 11px 16px;
+			cursor: pointer;
+			margin: 14px 0 4px;
+		}
+
+		.datetime-pill span {
+			font-size: 13px;
+			font-weight: 700;
+			color: var(--ink);
+		}
+
+		.datetime-pill svg {
+			transition: transform .2s ease;
+		}
+
+		.datetime-pill.open svg {
+			transform: rotate(180deg);
+		}
+
+		.detail-panel-inner {
+			padding-top: 10px;
+			display: none;
+		}
+
+		.detail-panel-inner.open {
+			display: block;
+		}
+
+		.cal-card {
+			background: var(--card);
+			border: 1px solid var(--line);
+			border-radius: 16px;
+			padding: 16px;
+			margin-top: 8px;
+		}
+
+		.cal-header {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 18px;
+			margin-bottom: 12px;
+		}
+
+		.cal-header span {
+			font-size: 14px;
+			font-weight: 800;
+			color: var(--ink);
+		}
+
+		.cal-nav {
+			width: 26px;
+			height: 26px;
+			border: none;
+			background: var(--bg);
+			border-radius: 50%;
+			font-size: 15px;
+			font-weight: 800;
+			color: var(--navy);
+			cursor: pointer;
+		}
+
+		.cal-body {
+			display: flex;
+			gap: 14px;
+		}
+
+		.cal-grid-wrap {
+			flex: 1;
+			min-width: 0;
+		}
+
+		.cal-weekdays {
+			display: grid;
+			grid-template-columns: repeat(7, 1fr);
+			text-align: center;
+			font-size: 10.5px;
+			font-weight: 700;
+			color: var(--slate);
+			margin-bottom: 4px;
+		}
+
+		.cal-grid {
+			display: grid;
+			grid-template-columns: repeat(7, 1fr);
+			gap: 2px;
+		}
+
+		.cal-day {
+			aspect-ratio: 1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 12px;
+			font-weight: 700;
+			color: var(--ink);
+			border-radius: 8px;
+			cursor: pointer;
+		}
+
+		.cal-day:hover {
+			background: var(--bg);
+		}
+
+		.cal-day.empty {
+			visibility: hidden;
+			cursor: default;
+		}
+
+		.cal-day.disabled {
+			color: #D3D5E0;
+			cursor: not-allowed;
+		}
+
+		.cal-day.disabled:hover {
+			background: none;
+		}
+
+		.cal-day.today {
+			color: var(--teal);
+		}
+
+		.cal-day.selected {
+			background: var(--navy);
+			color: #fff;
+		}
+
+		.cal-side {
+			width: 96px;
+			flex-shrink: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		.cal-toggle-group {
+			display: flex;
+			background: var(--bg);
+			border-radius: 10px;
+			padding: 3px;
+		}
+
+		.cal-toggle {
+			flex: 1;
+			border: none;
+			background: transparent;
+			padding: 7px 0;
+			border-radius: 7px;
+			font-size: 11.5px;
+			font-weight: 700;
+			color: var(--slate);
+			cursor: pointer;
+			font-family: inherit;
+		}
+
+		.cal-toggle.active {
+			background: var(--navy);
+			color: #fff;
+		}
+
+		.cal-num-group {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+		}
+
+		.cal-num-select {
+			flex: 1;
+			min-width: 0;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			padding: 6px 4px;
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--ink);
+			font-family: inherit;
+			background: #fff;
+			outline: none;
+		}
+
+		.cal-num-unit {
+			font-size: 11px;
+			font-weight: 700;
+			color: var(--muted);
+			flex-shrink: 0;
+		}
+
+		.cal-apply-btn {
+			width: 100%;
+			margin-top: 14px;
+			border: none;
+			background: var(--amber);
+			color: var(--navy);
+			font-weight: 800;
+			padding: 11px 0;
+			border-radius: 12px;
+			cursor: pointer;
+			font-family: inherit;
+			font-size: 14px;
+		}
+
+		.chip-row {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin-top: 8px;
+		}
+
+		.chip {
+			padding: 8px 14px;
+			border-radius: 999px;
+			border: 1.5px solid var(--line);
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--muted);
+			cursor: pointer;
+			background: var(--card);
+		}
+
+		.chip.active {
+			background: var(--navy);
+			border-color: var(--navy);
+			color: #fff;
+		}
+
+		.time-input {
+			display: flex;
+			gap: 8px;
+			margin-top: 8px;
+		}
+
+		.time-input div {
+			flex: 1;
+			background: var(--card);
+			border-radius: 10px;
+			padding: 8px 10px;
+			text-align: center;
+			font-size: 13px;
+			font-weight: 700;
+			border: 1px solid var(--line);
+		}
+
+		.time-input div span {
+			display: block;
+			font-size: 10.5px;
+			color: var(--slate);
+			font-weight: 600;
+			margin-bottom: 2px;
+		}
+
+		.time-input input {
+			width: 100%;
+			border: none;
+			outline: none;
+			background: transparent;
+			font-family: inherit;
+			font-size: 13.5px;
+			font-weight: 700;
+			color: var(--ink);
+			text-align: center;
+			padding: 2px 0 0;
+		}
+
+		.purpose-select {
+			width: 100%;
+			padding: 12px 14px;
+			border: 1.5px solid var(--line);
+			border-radius: 12px;
+			font-size: 14px;
+			font-weight: 700;
+			color: var(--ink);
+			background: var(--card);
+			font-family: inherit;
+			outline: none;
+			cursor: pointer;
+			margin-top: 4px;
+		}
+
+		.purpose-select:focus {
+			border-color: var(--teal);
+		}
+
+		.cta {
+			margin-top: 16px;
+			width: 100%;
+			border: none;
+			border-radius: 14px;
+			padding: 15px;
+			background: var(--amber);
+			color: var(--navy);
+			font-size: 15px;
+			font-weight: 800;
+			cursor: pointer;
+			font-family: inherit;
+			box-shadow: 0 12px 20px -10px rgba(255, 182, 39, 0.6);
+		}
+
+		.cta.secondary {
+			background: var(--bg);
+			color: var(--navy);
+			box-shadow: none;
+			border: 1px solid var(--line);
+		}
+
+		.recent-label {
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--slate);
+			margin: 22px 0 10px;
+		}
+
+		.recent-item {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			padding: 10px 2px;
+			border-bottom: 1px solid var(--line);
+			cursor: pointer;
+		}
+
+		.recent-item svg {
+			width: 16px;
+			height: 16px;
+			stroke: var(--slate);
+			fill: none;
+			stroke-width: 2;
+			flex-shrink: 0;
+		}
+
+		.recent-item .t {
+			font-size: 13.5px;
+			font-weight: 700;
+		}
+
+		.recent-item .s {
+			font-size: 11.5px;
+			color: var(--muted);
+		}
+
+		/* ---- result block (appears within home panel) ---- */
+		.result-block {
+			display: none;
+			margin-top: 22px;
+		}
+
+		.result-block.show {
+			display: block;
+		}
+
+		.result-toolbar {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			margin-bottom: 4px;
+		}
+
+		.best-badge {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			background: var(--navy);
+			color: #fff;
+			font-size: 12px;
+			font-weight: 800;
+			padding: 6px 12px;
+			border-radius: 999px;
+			margin-bottom: 12px;
+		}
+
+		.best-badge .dot {
+			width: 6px;
+			height: 6px;
+			border-radius: 50%;
+			background: var(--mint);
+		}
+
+		.sort-select {
+			border: 1.5px solid var(--line);
+			background: var(--card);
+			border-radius: 999px;
+			padding: 6px 12px;
+			font-size: 12px;
+			font-weight: 700;
+			color: var(--muted);
+			font-family: inherit;
+			outline: none;
+			cursor: pointer;
+			margin-bottom: 12px;
+		}
+
+		.result-card {
+			background: var(--card);
+			border: 1px solid var(--line);
+			border-radius: 16px;
+			padding: 18px;
+			box-shadow: 0 10px 24px -18px rgba(27, 31, 59, 0.5);
+			margin-bottom: 14px;
+		}
+
+		.route-od {
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--teal);
+			margin-bottom: 6px;
+		}
+
+		.route-times {
+			display: flex;
+			align-items: baseline;
+			gap: 10px;
+		}
+
+		.route-times .t1 {
+			font-size: 24px;
+			font-weight: 800;
+		}
+
+		.route-times .arrow {
+			color: var(--slate);
+			font-size: 15px;
+		}
+
+		.route-times .t2 {
+			font-size: 24px;
+			font-weight: 800;
+			color: var(--muted);
+		}
+
+		.route-sub {
+			font-size: 12.5px;
+			color: var(--muted);
+			margin-top: 4px;
+			font-weight: 600;
+		}
+
+		.stat-row {
+			display: flex;
+			gap: 8px;
+			margin-top: 16px;
+		}
+
+		.stat-box {
+			flex: 1;
+			background: var(--bg);
+			border-radius: 12px;
+			padding: 11px 6px;
+			text-align: center;
+		}
+
+		.stat-box svg {
+			width: 17px;
+			height: 17px;
+			stroke: var(--teal);
+			fill: none;
+			stroke-width: 1.8;
+			margin-bottom: 4px;
+		}
+
+		.stat-box .v {
+			font-size: 14px;
+			font-weight: 800;
+		}
+
+		.stat-box .l {
+			font-size: 10px;
+			color: var(--slate);
+			font-weight: 700;
+			margin-top: 1px;
+		}
+
+		.why-label {
+			font-size: 12.5px;
+			font-weight: 800;
+			color: var(--navy);
+			margin: 16px 0 8px;
+		}
+
+		.stackbar {
+			display: flex;
+			height: 14px;
+			border-radius: 8px;
+			overflow: hidden;
+			margin-bottom: 10px;
+		}
+
+		.stackbar div {
+			height: 100%;
+		}
+
+		.legend {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 7px 12px;
+		}
+
+		.legend .item {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			font-size: 10.5px;
+			color: var(--muted);
+			font-weight: 600;
+		}
+
+		.legend .sw {
+			width: 8px;
+			height: 8px;
+			border-radius: 2px;
+			flex-shrink: 0;
+		}
+
+		.reason-note {
+			background: #FFF7E8;
+			border: 1px solid #FFE3AD;
+			border-radius: 12px;
+			padding: 12px 14px;
+			font-size: 12px;
+			color: #8A5A00;
+			font-weight: 600;
+			line-height: 1.55;
+			margin-top: 14px;
+		}
+
+		.link-btn {
+			display: block;
+			text-align: center;
+			font-size: 13px;
+			font-weight: 700;
+			color: var(--teal);
+			margin-top: 12px;
+			cursor: pointer;
+		}
+
+		/* ================= DETAIL PANEL (slides over map) ================= */
+		.detail-panel {
+			position: absolute;
+			top: 20px;
+			left: 494px;
+			bottom: 20px;
+			width: 360px;
+			z-index: 10;
+			background: var(--card);
+			border-radius: 16px;
+			box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+			display: none;
+			flex-direction: column;
+		}
+
+		.detail-panel.active {
+			display: flex;
+		}
+
+		.sheet-head {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 22px 22px 12px;
+			border-bottom: 1px solid var(--line);
+		}
+
+		.sheet-head h2 {
+			font-size: 17px;
+			font-weight: 800;
+			margin: 0;
+		}
+
+		.sheet-head .x {
+			width: 30px;
+			height: 30px;
+			border-radius: 50%;
+			background: var(--bg);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+		}
+
+		.sheet-body {
+			flex: 1;
+			overflow-y: auto;
+			padding: 16px 22px 30px;
+		}
+
+		.sheet-top {
+			margin-bottom: 18px;
+		}
+
+		.sheet-top-line {
+			font-size: 14px;
+			font-weight: 800;
+			color: var(--ink);
+			margin-bottom: 6px;
+		}
+
+		.sheet-divider {
+			border-top: 1px dashed var(--line);
+			height: 0;
+			margin-bottom: 10px;
+		}
+
+		.sheet-seat-label {
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--muted);
+		}
+
+		.sheet-seat-label b {
+			color: var(--mint);
+			font-size: 14px;
+		}
+
+		.sheet-seat-label span {
+			font-weight: 600;
+			color: var(--slate);
+		}
+
+		.transport-summary {
+			margin: 14px 0 16px;
+			padding: 14px;
+			border: 1px solid #D9E6E6;
+			border-radius: 14px;
+			background: #F1F8F7;
+		}
+
+		.transport-summary .title {
+			font-size: 11px;
+			font-weight: 800;
+			color: var(--teal);
+			margin-bottom: 8px;
+		}
+
+		.transport-summary .route {
+			display: flex;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 7px;
+			font-size: 14px;
+			font-weight: 800;
+		}
+
+		.transport-summary .route-chip {
+			display: inline-flex;
+			align-items: center;
+			gap: 5px;
+			padding: 6px 9px;
+			border-radius: 9px;
+			background: #fff;
+			border: 1px solid var(--line);
+		}
+
+		.transport-summary .arrow {
+			color: var(--slate);
+		}
+
+		.timeline-box {
+			background: var(--bg);
+			border-radius: 16px;
+			padding: 18px 16px;
+		}
+
+		.tl-station {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.tl-dot {
+			width: 10px;
+			height: 10px;
+			border-radius: 50%;
+			background: var(--navy);
+			flex-shrink: 0;
+		}
+
+		.tl-dot.end {
+			background: var(--coral);
+		}
+
+		.tl-label {
+			font-size: 13.5px;
+			font-weight: 800;
+			color: var(--ink);
+		}
+
+		.tl-row {
+			display: flex;
+			gap: 12px;
+			padding: 8px 0 8px 4px;
+		}
+
+		.tl-mode {
+			width: 44px;
+			flex-shrink: 0;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			padding-left: 1px;
+			border-left: 2px dashed var(--line);
+			margin-left: 4px;
+		}
+
+		.tl-mode-badge {
+			width: 28px;
+			height: 28px;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 14px;
+			color: #fff;
+			margin: 4px 0 4px -16px;
+			line-height: 1;
+		}
+
+		.tl-mode-badge.subway {
+			background: var(--teal);
+		}
+
+		.tl-mode-badge.bus {
+			background: var(--orange);
+		}
+
+		.tl-mode-badge.walk {
+			background: var(--slate);
+		}
+
+		.tl-mode-time {
+			font-size: 10.5px;
+			font-weight: 700;
+			color: var(--muted);
+		}
+
+		.tl-content {
+			flex: 1;
+			min-width: 0;
+		}
+
+		.walk-card {
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 12px;
+			padding: 12px 14px;
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--muted);
+		}
+
+		.tl-gap {
+			height: 10px;
+		}
+
+		.transit-card {
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 16px;
+			padding: 16px;
+		}
+
+		.transit-card .head {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			margin-bottom: 12px;
+		}
+
+		.transit-card .head .badge {
+			width: 26px;
+			height: 26px;
+			border-radius: 8px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 14px;
+			color: #fff;
+			flex-shrink: 0;
+			line-height: 1;
+		}
+
+		.badge.subway {
+			background: var(--teal);
+		}
+
+		.badge.bus {
+			background: var(--orange);
+		}
+
+		.transit-card .head h3 {
+			font-size: 14px;
+			font-weight: 800;
+			margin: 0;
+		}
+
+		.ride-route {
+			display: grid;
+			grid-template-columns: 42px 1fr;
+			gap: 5px 8px;
+			margin-top: 10px;
+			font-size: 12px;
+		}
+
+		.ride-route .label {
+			color: var(--slate);
+			font-weight: 700;
+		}
+
+		.ride-route .place {
+			color: var(--ink);
+			font-weight: 800;
+		}
+
+		.car-dir-note {
+			font-size: 10.5px;
+			color: var(--slate);
+			font-weight: 600;
+			margin-bottom: 8px;
+		}
+
+		.cars {
+			display: flex;
+			gap: 4px;
+			margin: 6px 0;
+		}
+
+		.car-cell {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 4px;
+		}
+
+		.car-no {
+			font-size: 10px;
+			font-weight: 800;
+			color: var(--muted);
+		}
+
+		.car-bar {
+			width: 100%;
+			height: 22px;
+			border-radius: 5px;
+		}
+
+		.congestion-detail-btn {
+			width: 100%;
+			margin-top: 10px;
+			border: 1.5px solid var(--line);
+			background: #fff;
+			border-radius: 10px;
+			padding: 9px 0;
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--teal);
+			cursor: pointer;
+			font-family: inherit;
+		}
+
+		.congestion-detail-btn:hover {
+			background: var(--bg);
+		}
+
+		.mini-legend {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px 12px;
+			margin-top: 8px;
+		}
+
+		.mini-legend .item {
+			display: flex;
+			align-items: center;
+			gap: 5px;
+			font-size: 10.5px;
+			color: var(--muted);
+			font-weight: 700;
+		}
+
+		.mini-legend .sw {
+			width: 8px;
+			height: 8px;
+			border-radius: 2px;
+		}
+
+		.bus-eta {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 9px 0;
+			border-top: 1px solid var(--line);
+		}
+
+		.bus-eta:first-of-type {
+			border-top: none;
+		}
+
+		.bus-eta .name {
+			font-size: 13px;
+			font-weight: 700;
+		}
+
+		.bus-eta .sub {
+			font-size: 11px;
+			color: var(--muted);
+		}
+
+		.bus-eta .eta {
+			font-size: 13px;
+			font-weight: 800;
+			color: var(--navy);
+		}
+
+		/* ================= ROOM ================= */
+		.code-row {
+			display: flex;
+			gap: 8px;
+			margin: 22px 0;
+		}
+
+		.code-box {
+			flex: 1;
+			min-width: 0;
+			aspect-ratio: 1;
+			border: 2px solid var(--line);
+			border-radius: 12px;
+			text-align: center;
+			font-size: 20px;
+			font-weight: 800;
+			font-family: inherit;
+			background: var(--bg);
+			color: var(--ink);
+			outline: none;
+			padding: 0;
+		}
+
+		.code-box:focus {
+			border-color: var(--teal);
+		}
+
+		.code-box.filled {
+			border-color: var(--navy);
+			color: var(--navy);
+			background: #fff;
+		}
+
+		.dest-card {
+			background: var(--navy);
+			color: #fff;
+			border-radius: 18px;
+			padding: 20px;
+			margin-bottom: 16px;
+		}
+
+		.dest-card .eyebrow {
+			font-size: 11.5px;
+			font-weight: 700;
+			color: #B9C0F0;
+			letter-spacing: 0.02em;
+		}
+
+		.dest-card h2 {
+			font-size: 18px;
+			font-weight: 800;
+			margin: 6px 0 8px;
+		}
+
+		.dest-card-top {
+			display: flex;
+			align-items: flex-start;
+			justify-content: space-between;
+			gap: 10px;
+		}
+
+		.dest-edit-btn {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			font-size: 11.5px;
+			font-weight: 700;
+			color: #B9C0F0;
+			cursor: pointer;
+			flex-shrink: 0;
+		}
+
+		.host-label {
+			font-size: 12px;
+			font-weight: 600;
+			color: #C7CCF2;
+			margin-bottom: 14px;
+		}
+
+		.host-label b {
+			color: #fff;
+			font-weight: 800;
+			margin-left: 2px;
+		}
+
+		.host-tag {
+			background: var(--amber);
+			color: var(--navy);
+			font-size: 9.5px;
+			font-weight: 800;
+			padding: 2px 6px;
+			border-radius: 999px;
+			margin-left: 2px;
+		}
+
+		.dest-card .meta {
+			display: flex;
+			gap: 14px;
+			align-items: center;
+			flex-wrap: wrap;
+		}
+
+		.dest-card .meta div {
+			font-size: 11px;
+			color: #C7CCF2;
+			font-weight: 600;
+		}
+
+		.dest-card .meta b {
+			display: block;
+			font-size: 13.5px;
+			color: #fff;
+			font-weight: 800;
+			margin-top: 2px;
+		}
+
+		.host-only {
+			display: none;
+		}
+
+		.invite-row {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			background: var(--bg);
+			border-radius: 14px;
+			padding: 12px 16px;
+			margin-bottom: 18px;
+		}
+
+		.invite-row .code {
+			font-size: 14.5px;
+			font-weight: 800;
+			letter-spacing: 0.06em;
+		}
+
+		.invite-row .copy {
+			font-size: 12px;
+			font-weight: 700;
+			color: var(--teal);
+			cursor: pointer;
+		}
+
+		.member-row {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			padding: 12px 2px;
+			border-bottom: 1px solid var(--line);
+		}
+
+		.avatar {
+			width: 36px;
+			height: 36px;
+			border-radius: 50%;
+			background: var(--teal);
+			color: #fff;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-weight: 800;
+			font-size: 12.5px;
+			flex-shrink: 0;
+		}
+
+		.member-row .info {
+			flex: 1;
+			min-width: 0;
+		}
+
+		.member-row .name {
+			font-size: 13.5px;
+			font-weight: 800;
+			display: flex;
+			align-items: center;
+			gap: 6px;
+		}
+
+		.status-dot {
+			width: 7px;
+			height: 7px;
+			border-radius: 50%;
+			flex-shrink: 0;
+		}
+
+		.member-row .eta {
+			font-size: 11.5px;
+			color: var(--muted);
+			font-weight: 600;
+			margin-top: 1px;
+		}
+
+		.member-row .arrival {
+			font-size: 13.5px;
+			font-weight: 800;
+			text-align: right;
+			flex-shrink: 0;
+		}
+
+		.invite-more {
+			margin-top: 16px;
+			width: 100%;
+			border: 1.5px dashed var(--slate);
+			border-radius: 14px;
+			background: none;
+			padding: 12px;
+			font-size: 13px;
+			font-weight: 700;
+			color: var(--teal);
+			cursor: pointer;
+			font-family: inherit;
+		}
+
+		.placeholder {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			height: 70%;
+			text-align: center;
+			color: var(--slate);
+		}
+
+		.placeholder svg {
+			width: 44px;
+			height: 44px;
+			stroke: var(--slate);
+			fill: none;
+			stroke-width: 1.4;
+			margin-bottom: 14px;
+		}
+
+		.placeholder .t {
+			font-size: 14.5px;
+			font-weight: 700;
+			color: var(--muted);
+		}
+
+		.placeholder .s {
+			font-size: 12px;
+			margin-top: 4px;
+		}
+
+		/* ================= MAP AREA ================= */
+		.map-area {
+			flex: 1;
+			position: relative;
+			overflow: hidden;
+			transition: all 0.3s ease;
+		}
+
+		.map-controls {
+			position: absolute;
+			bottom: 70px;
+			right: 18px;
+			display: flex;
+			flex-direction: column;
+			background: #fff;
+			border-radius: 12px;
+			overflow: hidden;
+			box-shadow: 0 6px 16px -6px rgba(27, 31, 59, 0.3);
+			z-index: 2;
+		}
+
+		.map-controls button {
+			width: 38px;
+			height: 38px;
+			border: none;
+			background: #fff;
+			border-bottom: 1px solid var(--line);
+			font-size: 17px;
+			font-weight: 700;
+			color: var(--navy);
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 0;
+		}
+
+		.map-controls button:last-child {
+			border-bottom: none;
+		}
+
+		.weather-chip {
+			position: absolute;
+			top: 18px;
+			right: 18px;
+			background: #fff;
+			border-radius: 14px;
+			padding: 10px 16px;
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			box-shadow: 0 6px 16px -6px rgba(27, 31, 59, 0.3);
+			z-index: 2;
+		}
+
+		.weather-chip svg {
+			width: 22px;
+			height: 22px;
+			stroke: var(--orange);
+			fill: none;
+			stroke-width: 1.6;
+		}
+
+		.weather-chip .temp {
+			font-size: 15px;
+			font-weight: 800;
+		}
+
+		.weather-chip .desc {
+			font-size: 10.5px;
+			color: var(--muted);
+			font-weight: 600;
+		}
+
+		.nearby-stops-layer {
+			position: absolute;
+			inset: 0;
+			z-index: 1;
+			display: none;
+		}
+
+		.nearby-stops-layer.show {
+			display: block;
+		}
+
+		.nearby-stops-btn {
+			position: absolute;
+			top: 82px;
+			right: 18px;
+			z-index: 2;
+			background: #fff;
+			border-radius: 12px;
+			padding: 10px 14px;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--muted);
+			cursor: pointer;
+			box-shadow: 0 6px 16px -6px rgba(27, 31, 59, 0.3);
+		}
+
+		.nearby-stops-btn svg {
+			width: 16px;
+			height: 16px;
+			stroke: var(--muted);
+			fill: none;
+			stroke-width: 1.8;
+		}
+
+		.nearby-stops-btn.active {
+			background: var(--navy);
+			color: #fff;
+		}
+
+		.nearby-stops-btn.active svg {
+			stroke: var(--amber);
+		}
+
+		.scale-chip {
+			position: absolute;
+			bottom: 18px;
+			left: 18px;
+			background: rgba(255, 255, 255, 0.9);
+			font-size: 10.5px;
+			font-weight: 700;
+			color: var(--muted);
+			padding: 4px 10px;
+			border-radius: 6px;
+			z-index: 2;
+		}
+
+		.route-map-legend {
+			position: absolute;
+			left: 18px;
+			bottom: 50px;
+			z-index: 2;
+			display: none;
+			flex-wrap: wrap;
+			gap: 6px;
+			max-width: min(520px, calc(100% - 100px));
+			padding: 8px 10px;
+			border-radius: 10px;
+			background: rgba(255, 255, 255, 0.94);
+			box-shadow: 0 5px 14px -7px rgba(27, 31, 59, .45);
+		}
+
+		.route-map-legend.show {
+			display: flex;
+		}
+
+		.route-legend-item {
+			display: inline-flex;
+			align-items: center;
+			gap: 5px;
+			font-size: 11px;
+			font-weight: 800;
+			color: var(--ink);
+		}
+
+		.route-legend-line {
+			width: 18px;
+			height: 5px;
+			border-radius: 999px;
+		}
+
+		#tmapDiv {
+			position: absolute;
+			inset: 0;
+			z-index: 0;
+			display: none;
+		}
+
+		#tmapDiv.ready {
+			display: block;
+		}
+
+		.map-mock-layer {
+			position: absolute;
+			inset: 0;
+			z-index: 1;
+			transition: transform .2s ease;
+			transform-origin: center center;
+		}
+
+		.map-mock-layer.hide {
+			display: none;
+		}
+
+		.api-status {
+			position: absolute;
+			top: 18px;
+			left: 18px;
+			z-index: 3;
+			background: rgba(27, 31, 59, 0.9);
+			color: #fff;
+			font-size: 11.5px;
+			font-weight: 700;
+			padding: 8px 14px;
+			border-radius: 10px;
+			line-height: 1.5;
+			max-width: 280px;
+			display: none;
+		}
+
+		.api-status.show {
+			display: block;
+		}
+
+		.api-status a {
+			color: #FFD98A;
+		}
+	</style>
+</head>
+
+<body>
+
+	<!-- ================= 긴급재난문자 배너 (data.go.kr) ================= -->
+	<div class="disaster-banner" id="disasterBanner">
+		<svg viewBox="0 0 24 24">
+			<path
+				d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-2.96L13.71 3.86a2 2 0 0 0-3.42 0z" />
+		</svg>
+		<span><b>[안전안내문자]</b> 서울 강남구 — 오늘 18:00~20:00 시간당 20mm 이상 호우특보. 지하철·역사 주변 침수 위험 지역 이용 시 주의하세요.</span>
+		<div class="disaster-close" onclick="closeDisasterBanner()">
+			<svg viewBox="0 0 24 24">
+				<path d="M6 6l12 12M18 6L6 18" />
+			</svg>
+		</div>
+	</div>
+
+	<div class="app">
+
+		<!-- ================= ICON RAIL ================= -->
+		<nav class="rail">
+			<div class="rail-logo"><svg viewBox="0 0 24 24">
+					<path d="M12 3l8 6-8 12-8-12z" />
+				</svg></div>
+			<button class="rail-item active" data-panel="panel-home" onclick="goRail(this,'panel-home')">
+				<svg viewBox="0 0 24 24">
+					<path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10" />
+				</svg>홈
+			</button>
+			<button class="rail-item" data-panel="panel-transit" onclick="goRail(this,'panel-transit')">
+				<svg viewBox="0 0 24 24">
+					<rect x="4" y="4" width="16" height="14" rx="3" />
+					<path d="M4 13h16M8 18l-1.5 3M16 18l1.5 3M8 8h8" />
+				</svg>대중교통
+			</button>
+			<button class="rail-item" data-panel="panel-saved" onclick="goRail(this,'panel-saved')">
+				<svg viewBox="0 0 24 24">
+					<path d="M6 3h12v18l-6-4-6 4z" />
+				</svg>저장
+			</button>
+			<button class="rail-item" data-panel="panel-room-join" onclick="goRail(this,'panel-room-join')">
+				<svg viewBox="0 0 24 24">
+					<circle cx="9" cy="8" r="3" />
+					<circle cx="17" cy="9" r="2.5" />
+					<path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c2.8 0 5 2.2 5 5.5" />
+				</svg>방
+			</button>
+			<div class="rail-spacer"></div>
+			<button class="rail-item" data-panel="panel-account" onclick="goRail(this,'panel-account')">
+				<svg viewBox="0 0 24 24">
+					<circle cx="12" cy="8" r="4" />
+					<path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+				</svg>계정
+			</button>
+		</nav>
+
+		<!-- ================= PANEL COLLAPSE/EXPAND TOGGLE ================= -->
+		<div class="panel-toggle" id="panelToggle" onclick="togglePanel()">
+			<svg viewBox="0 0 24 24">
+				<path d="M15 5l-7 7 7 7" />
+			</svg>
+		</div>
+
+		<!-- ================= HOME PANEL ================= -->
+		<aside class="panel active" id="panel-home">
+			<div class="search-card" style="margin-top:6px;">
+				<div class="od-fields">
+					<div class="field-row">
+						<div class="field-icon"><svg viewBox="0 0 24 24">
+								<circle cx="12" cy="9" r="2.5" />
+								<path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z" />
+							</svg></div>
+						<input type="text" id="originInput" placeholder="출발지 입력" oninput="showSuggestions(this)"
+							onfocus="showSuggestions(this)">
+						<div class="autocomplete-list" id="originInputList"></div>
+					</div>
+					<div class="field-row">
+						<div class="field-icon"><svg viewBox="0 0 24 24">
+								<path d="M5 3v18M5 4h11l-2.5 4L16 12H5" />
+							</svg></div>
+						<input type="text" id="destInput" placeholder="목적지 입력" oninput="showSuggestions(this)"
+							onfocus="showSuggestions(this)">
+						<div class="autocomplete-list" id="destInputList"></div>
+					</div>
+					<div class="swap-btn-main" onclick="swapFields()"><svg viewBox="0 0 24 24">
+							<path d="M7 7h11M15 3l3 4-3 4M17 17H6M9 21l-3-4 3-4" />
+						</svg></div>
+				</div>
+
+				<div id="waypointList"></div>
+				<div class="add-waypoint-link" id="addWaypointLink" onclick="addWaypoint()">+ 경유지 추가</div>
+
+				<div class="datetime-pill" id="datetimePill" onclick="toggleDatetimePanel()">
+					<span id="datetimePillText">날짜 선택</span>
+					<svg id="datetimePillChevron" width="14" height="14" viewBox="0 0 24 24" stroke="#2D6A6A"
+						stroke-width="2" fill="none">
+						<path d="M6 9l6 6 6-6" />
+					</svg>
+				</div>
+
+				<div class="detail-panel-inner" id="detailPanelInner">
+					<input type="date" id="tripDate" style="display:none;">
+					<input type="time" id="tripTime" value="19:00" style="display:none;">
+
+					<div class="cal-card">
+						<div class="cal-header">
+							<button type="button" class="cal-nav" onclick="calShiftMonth(-1)">‹</button>
+							<span id="calYearMonth">달력</span>
+							<button type="button" class="cal-nav" onclick="calShiftMonth(1)">›</button>
+						</div>
+						<div class="cal-body">
+							<div class="cal-grid-wrap">
+								<div class="cal-weekdays">
+									<span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+								</div>
+								<div class="cal-grid" id="calGrid"></div>
+							</div>
+							<div class="cal-side">
+								<div class="cal-toggle-group">
+									<button type="button" class="cal-toggle active" id="modeDeparture"
+										onclick="selectSegment(this,'출발 시간')">출발</button>
+									<button type="button" class="cal-toggle" id="modeArrival"
+										onclick="selectSegment(this,'도착 시간')">도착</button>
+								</div>
+								<div class="cal-toggle-group">
+									<button type="button" class="cal-toggle active" id="ampmAM"
+										onclick="calSetAmPm('AM')">오전</button>
+									<button type="button" class="cal-toggle" id="ampmPM"
+										onclick="calSetAmPm('PM')">오후</button>
+								</div>
+								<div class="cal-num-group">
+									<select id="calHour" class="cal-num-select" onchange="calUpdatePreview()"></select>
+									<span class="cal-num-unit">시</span>
+								</div>
+								<div class="cal-num-group">
+									<select id="calMinute" class="cal-num-select"
+										onchange="calUpdatePreview()"></select>
+									<span class="cal-num-unit">분</span>
+								</div>
+							</div>
+						</div>
+						<button type="button" class="cal-apply-btn" onclick="applyDatetime()">적용</button>
+					</div>
+				</div>
+
+				<!-- 이동 목적 선택 드롭다운 -->
+				<div class="recent-label" style="margin:14px 0 8px;">이동 목적</div>
+				<select class="purpose-select" id="purposeSelect" onchange="onPurposeChange()">
+					<option value="school">등교</option>
+					<option value="appointment" selected>약속</option>
+					<option value="work">출근</option>
+					<option value="hospital">병원</option>
+					<option value="etc">기타</option>
+				</select>
+
+				<!-- 로그인 없이 비회원도 자유롭게 여유시간 설정할 수 있는 UI -->
+				<div
+					style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; background: var(--card); padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line);">
+					<span style="font-size: 13px; font-weight: 700; color: var(--navy);">목적 여유시간</span>
+					<div style="display: flex; align-items: center; gap: 6px;">
+						<input type="number" id="purposeBufferInput" value="15" min="0" max="120"
+							onchange="saveCustomBuffer()"
+							style="width: 60px; padding: 6px; border: 1.5px solid var(--line); border-radius: 8px; font-size: 14px; font-weight: 800; text-align: center; color: var(--navy); font-family: inherit; outline: none;">
+						<span style="font-size: 13px; font-weight: 700; color: var(--muted);">분</span>
+					</div>
+				</div>
+			</div>
+
+			<button class="cta" onclick="runSearch()">길찾기</button>
+
+			<!-- Result block -->
+			<div class="result-block" id="resultBlock">
+				<div class="result-toolbar">
+					<div class="best-badge"><span class="dot"></span>최적 경로</div>
+					<select class="sort-select" id="sortSelect">
+						<option value="best">최적 경로순</option>
+						<option value="transfer">최소 환승순</option>
+						<option value="seat">앉아서 갈 확률순</option>
+					</select>
+				</div>
+
+				<div class="result-card">
+					<div class="route-od" id="routeOD">
+						<span id="resultOriginText">출발지</span> → <span id="resultDestText">목적지</span>
+					</div>
+					<div class="route-times"><span class="t1" id="resultDepartTime">--:--</span><span
+							class="arrow">→</span><span class="t2" id="resultArriveTime">--:--</span></div>
+					<div class="route-sub" id="routeSubText">경로 정보를 불러오는 중입니다.</div>
+
+					<div class="stat-row">
+						<div class="stat-box">
+							<svg viewBox="0 0 24 24">
+								<path d="M4 17V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10M2 17h20M6 21l2-2h8l2 2" />
+							</svg>
+							<div class="v">62%</div>
+							<div class="l">앉을 확률</div>
+						</div>
+						<div class="stat-box">
+							<svg viewBox="0 0 24 24">
+								<path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" />
+								<path d="M9 19l3 3 3-3M12 12v10" />
+							</svg>
+							<div class="v">--:--</div>
+							<div class="l">비 예보 시작</div>
+						</div>
+						<div class="stat-box">
+							<svg viewBox="0 0 24 24">
+								<circle cx="12" cy="12" r="9" />
+								<path d="M12 7v5l3 3" />
+							</svg>
+							<div class="v">--분</div>
+							<div class="l">이동 시간</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="why-label">왜 이 시간을 추천했나요?</div>
+				<div class="result-card">
+					<div class="stackbar">
+						<div style="width:38%;background:#2D6A6A;"></div>
+						<div style="width:8%;background:#3DDC97;"></div>
+						<div style="width:13%;background:#FF6B57;"></div>
+						<div style="width:6%;background:#FFB627;"></div>
+						<div style="width:11%;background:#FF8C42;"></div>
+						<div style="width:11%;background:#8B90A8;"></div>
+						<div style="width:13%;background:#1B1F3B;"></div>
+					</div>
+					<div class="legend">
+						<div class="item"><span class="sw" style="background:#2D6A6A;"></span>기본 이동 18분</div>
+						<div class="item"><span class="sw" style="background:#3DDC97;"></span>대기 4분</div>
+						<div class="item"><span class="sw" style="background:#FF6B57;"></span>혼잡도 보정 6분</div>
+						<div class="item"><span class="sw" style="background:#FFB627;"></span>날씨 보정 3분</div>
+						<div class="item"><span class="sw" style="background:#FF8C42;"></span>교통 보정 5분</div>
+						<div class="item"><span class="sw" style="background:#8B90A8;"></span>목적 여유 5분</div>
+						<div class="item"><span class="sw" style="background:#1B1F3B;"></span>개인 여유 5분</div>
+					</div>
+					<div class="reason-note">최근 7일간 이 시간대 목적지 부근 평균 혼잡도 및 실시간 기상 상태를 종합하여 여유 시간을 추가했습니다.</div>
+				</div>
+
+				<button class="cta secondary" onclick="openDetail()">상세보기</button>
+				<div class="link-btn" onclick="resetSearch()">다시입력</div>
+			</div>
+		</aside>
+
+		<!-- ================= PLACEHOLDER PANELS ================= -->
+		<aside class="panel" id="panel-transit">
+			<div class="h1" style="margin-bottom:0;">대중교통</div>
+			<div class="placeholder">
+				<svg viewBox="0 0 24 24">
+					<rect x="4" y="4" width="16" height="14" rx="3" />
+					<path d="M4 13h16M8 18l-1.5 3M16 18l1.5 3M8 8h8" />
+				</svg>
+				<div class="t">실시간 대중교통 정보</div>
+				<div class="s">노선 및 혼잡도 검색 화면</div>
+			</div>
+		</aside>
+		<aside class="panel" id="panel-saved">
+			<div class="h1" style="margin-bottom:0;">저장</div>
+			<div class="placeholder">
+				<svg viewBox="0 0 24 24">
+					<path d="M6 3h12v18l-6-4-6 4z" />
+				</svg>
+				<div class="t">자주 가는 경로</div>
+				<div class="s">저장한 출발지·목적지 목록</div>
+			</div>
+		</aside>
+		<aside class="panel" id="panel-account">
+			<!-- 로그인 -->
+			<div id="accountLogin">
+				<div class="eyebrow">계정</div>
+				<div class="h1">로그인하고<br>내 정보를 관리하세요</div>
+				<div class="search-card">
+					<div class="field-row">
+						<div class="field-icon"><svg viewBox="0 0 24 24">
+								<path d="M4 6h16v12H4z" />
+								<path d="M4 7l8 6 8-6" />
+							</svg></div>
+						<input type="text" id="loginEmail" placeholder="이메일" value="">
+					</div>
+					<div class="field-row">
+						<div class="field-icon"><svg viewBox="0 0 24 24">
+								<rect x="5" y="11" width="14" height="9" rx="2" />
+								<path d="M8 11V7a4 4 0 0 1 8 0v4" />
+							</svg></div>
+						<input type="password" id="loginPwd" placeholder="비밀번호" value="">
+					</div>
+				</div>
+				<button class="cta" onclick="doLogin()">로그인</button>
+				<div class="link-btn" onclick="showAccountView('signup')">계정이 없으신가요? 회원가입</div>
+			</div>
+
+			<!-- 회원가입 -->
+			<div id="accountSignup" style="display:none;">
+				<div class="eyebrow">회원가입</div>
+				<div class="h1">서비스 이용을 위해<br>정보를 입력해주세요</div>
+				<div class="search-card">
+					<div class="field-row">
+						<div class="field-icon"><svg viewBox="0 0 24 24">
+								<path d="M4 6h16v12H4z" />
+								<path d="M4 7l8 6 8-6" />
+							</svg></div>
+						<input type="text" id="signupEmail" placeholder="이메일" value="">
+					</div>
+					<div class="field-row">
+						<div class="field-icon"><svg viewBox="0 0 24 24">
+								<rect x="5" y="11" width="14" height="9" rx="2" />
+								<path d="M8 11V7a4 4 0 0 1 8 0v4" />
+							</svg></div>
+						<input type="password" id="signupPwd" placeholder="비밀번호" value="">
+					</div>
+					<div class="field-row">
+						<div class="field-icon"><svg viewBox="0 0 24 24">
+								<rect x="5" y="11" width="14" height="9" rx="2" />
+								<path d="M8 11V7a4 4 0 0 1 8 0v4" />
+							</svg></div>
+						<input type="password" id="signupPwdCheck" placeholder="비밀번호 확인" value="">
+					</div>
+					<div class="field-row">
+						<div class="field-icon"><svg viewBox="0 0 24 24">
+								<circle cx="12" cy="8" r="4" />
+								<path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+							</svg></div>
+						<input type="text" id="signupNickname" placeholder="닉네임" value="">
+					</div>
+				</div>
+				<button class="cta" onclick="doSignup()">가입하기</button>
+				<div class="link-btn" onclick="showAccountView('login')">이미 계정이 있으신가요? 로그인</div>
+			</div>
+
+			<!-- 내 정보 -->
+			<div id="accountInfo" style="display:none;">
+				<div class="eyebrow">계정</div>
+				<div class="h1" id="accountGreeting">안녕하세요</div>
+				<div class="result-card">
+					<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+						<div class="avatar" id="accountAvatar" style="width:46px;height:46px;font-size:16px;">나</div>
+						<div>
+							<div style="font-size:15px;font-weight:800;" id="accountNickname">사용자</div>
+							<div style="font-size:12.5px;color:var(--muted);" id="accountEmail">user@example.com</div>
+						</div>
+					</div>
+					<div class="field-row" style="border-bottom:1px solid var(--line);padding:12px 0;">
+						<span style="font-size:13px;color:var(--muted);font-weight:700;width:90px;flex-shrink:0;">기본
+							출발지</span>
+						<span style="font-size:13.5px;font-weight:700;">미지정</span>
+					</div>
+					<div class="field-row" style="padding:12px 0;">
+						<span style="font-size:13px;color:var(--muted);font-weight:700;width:90px;flex-shrink:0;">선호
+							이동수단</span>
+						<span style="font-size:13.5px;font-weight:700;">지하철</span>
+					</div>
+				</div>
+				<button class="cta secondary" onclick="doLogout()">로그아웃</button>
+			</div>
+		</aside>
+
+		<!-- ================= ROOM JOIN ================= -->
+		<aside class="panel" id="panel-room-join">
+			<div class="eyebrow">약속방</div>
+			<div class="h1">초대 코드를<br>입력해주세요</div>
+			<div class="code-row" id="codeRow">
+				<input class="code-box filled" maxlength="1" value="7" oninput="codeBoxInput(this)">
+				<input class="code-box filled" maxlength="1" value="2" oninput="codeBoxInput(this)">
+				<input class="code-box filled" maxlength="1" value="K" oninput="codeBoxInput(this)">
+				<input class="code-box filled" maxlength="1" value="9" oninput="codeBoxInput(this)">
+				<input class="code-box" maxlength="1" value="" oninput="codeBoxInput(this)">
+				<input class="code-box" maxlength="1" value="" oninput="codeBoxInput(this)">
+			</div>
+			<button class="cta" onclick="joinRoom()">참여하기</button>
+			<div class="link-btn" onclick="createRoom()">새 약속방 만들기</div>
+		</aside>
+
+		<!-- ================= ROOM DASHBOARD ================= -->
+		<aside class="panel" id="panel-room-dash">
+			<div class="h1" style="margin-bottom:16px;">약속방</div>
+			<div class="dest-card">
+				<div class="dest-card-top">
+					<div class="eyebrow">최종 목적지 · 약속 시간</div>
+					<div class="dest-edit-btn host-only" onclick="toggleRoomEdit()">
+						<svg viewBox="0 0 24 24" width="14" height="14" stroke="#B9C0F0" stroke-width="2" fill="none">
+							<path d="M12 20h9" />
+							<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+						</svg>
+						수정
+					</div>
+				</div>
+
+				<div id="roomInfoView">
+					<h2 id="destName">강남역 2번 출구</h2>
+					<div class="host-label">방장 <b id="hostNameLabel">이서연</b></div>
+					<div class="meta">
+						<div>약속 시간<b id="meetDateTimeLabel">7월 16일 (목) 오후 7:00</b></div>
+						<div>참여 인원<b>4명</b></div>
+					</div>
+				</div>
+
+				<div id="roomEditPanel" style="display:none;">
+					<div class="field-row" style="border-bottom:none;padding-bottom:4px;">
+						<input type="text" id="destEditInput" placeholder="목적지" value="강남역 2번 출구"
+							style="background:#fff;border-radius:10px;padding:9px 12px;color:var(--ink);">
+					</div>
+
+					<div class="cal-card" style="margin-top:6px;">
+						<div class="cal-header">
+							<button type="button" class="cal-nav" onclick="roomCalShiftMonth(-1)">‹</button>
+							<span id="roomCalYearMonth">2026년 7월</span>
+							<button type="button" class="cal-nav" onclick="roomCalShiftMonth(1)">›</button>
+						</div>
+						<div class="cal-body">
+							<div class="cal-grid-wrap">
+								<div class="cal-weekdays">
+									<span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+								</div>
+								<div class="cal-grid" id="roomCalGrid"></div>
+							</div>
+							<div class="cal-side">
+								<div class="cal-toggle-group">
+									<button type="button" class="cal-toggle active" id="roomAmpmAM"
+										onclick="roomCalSetAmPm('AM')">오전</button>
+									<button type="button" class="cal-toggle" id="roomAmpmPM"
+										onclick="roomCalSetAmPm('PM')">오후</button>
+								</div>
+								<div class="cal-num-group">
+									<select id="roomCalHour" class="cal-num-select"></select>
+									<span class="cal-num-unit">시</span>
+								</div>
+								<div class="cal-num-group">
+									<select id="roomCalMinute" class="cal-num-select"></select>
+									<span class="cal-num-unit">분</span>
+								</div>
+							</div>
+						</div>
+						<button type="button" class="cal-apply-btn" onclick="saveRoomEdit()">적용</button>
+					</div>
+				</div>
+			</div>
+			<div class="invite-row">
+				<div>
+					<div style="font-size:11px;color:var(--slate);font-weight:700;">초대코드</div>
+					<div class="code">72K9-XQ</div>
+				</div>
+				<div class="copy" onclick="copyInviteCode(this)">복사하기</div>
+			</div>
+
+			<div class="recent-label" style="margin:4px 0 4px;">참여자</div>
+			<div class="member-row">
+				<div class="avatar">나</div>
+				<div class="info">
+					<div class="name">이서연 <span class="status-dot" style="background:#3DDC97;"></span><span
+							class="host-tag" id="hostTagMe" style="display:none;">방장</span></div>
+					<div class="eta">고려대학교 정문 부근</div>
+				</div>
+				<div class="arrival">19:00</div>
+			</div>
+			<div class="member-row">
+				<div class="avatar" style="background:#8B90A8;">김</div>
+				<div class="info">
+					<div class="name">김도윤 <span class="status-dot" style="background:#3DDC97;"></span><span
+							class="host-tag" id="hostTagOther" style="display:none;">방장</span></div>
+					<div class="eta">안암역 부근</div>
+				</div>
+				<div class="arrival">19:04</div>
+			</div>
+			<div class="member-row">
+				<div class="avatar" style="background:#FF8C42;">박</div>
+				<div class="info">
+					<div class="name">박하은 <span class="status-dot" style="background:#8B90A8;"></span></div>
+					<div class="eta">위치 비공개</div>
+				</div>
+				<div class="arrival">18:57</div>
+			</div>
+			<div class="member-row">
+				<div class="avatar" style="background:#1B1F3B;">최</div>
+				<div class="info">
+					<div class="name">최지호 <span class="status-dot" style="background:#3DDC97;"></span></div>
+					<div class="eta">강남역 3번 출구 부근</div>
+				</div>
+				<div class="arrival">19:02</div>
+			</div>
+
+			<button class="invite-more" onclick="inviteMore()">+ 새 참여자 초대하기</button>
+		</aside>
+
+		<!-- ================= DETAIL PANEL (slides over map) ================= -->
+		<aside class="detail-panel" id="detailPanel">
+			<div class="sheet-head">
+				<h2>세부정보</h2>
+				<div class="x" onclick="closeDetail()"><svg width="13" height="13" viewBox="0 0 24 24" stroke="#1B1F3B"
+						stroke-width="2.4" fill="none">
+						<path d="M6 6l12 12M18 6L6 18" />
+					</svg></div>
+			</div>
+			<div class="sheet-body">
+				<div class="sheet-top">
+					<div class="sheet-top-line">출발 <span id="detailDepartTime">--:--</span> ~ 도착 <span
+							id="detailArriveTime">--:--</span></div>
+					<div class="sheet-divider"></div>
+					<div class="sheet-seat-label">앉아서 갈 확률 <b id="detailSeatProb">62%</b> <span>(최근 7일 평균)</span></div>
+				</div>
+				<div class="transport-summary" id="detailTransportSummary">
+					<div class="title">이용할 교통수단</div>
+					<div class="route"><span class="route-chip">경로 검색 후 표시됩니다</span></div>
+				</div>
+
+				<div class="timeline-box">
+					<div class="tl-station"><span class="tl-dot"></span><span class="tl-label">출발지</span></div>
+					<div class="tl-row">
+						<div class="tl-mode">
+							<div class="tl-mode-badge walk">🚶</div>
+							<div class="tl-mode-time">도보</div>
+						</div>
+						<div class="tl-content">
+							<div class="walk-card">인근 정류장 및 역으로 도보 이동</div>
+						</div>
+					</div>
+					<div class="tl-station"><span class="tl-dot end"></span><span class="tl-label">목적지</span></div>
+					<div class="tl-gap"></div>
+
+					<div class="tl-row">
+						<div class="tl-mode">
+							<div class="tl-mode-badge subway">🚇</div>
+							<div class="tl-mode-time">지하철</div>
+						</div>
+						<div class="tl-content">
+							<div class="transit-card">
+								<div class="head">
+									<div class="badge subway">🚇</div>
+									<h3>지하철 실시간 칸별 혼잡도</h3>
+								</div>
+								<div class="car-dir-note">진입 예정 열차 칸별 데이터 수신 완료</div>
+								<div class="cars">
+									<div class="car-cell"><span class="car-no">1</span>
+										<div class="car-bar" style="background:#3DDC97;"></div>
+										<span class="prob-text"
+											style="font-size:9px; font-weight:700; margin-top:2px;">--%</span>
+									</div>
+									<div class="car-cell"><span class="car-no">2</span>
+										<div class="car-bar" style="background:#3DDC97;"></div>
+										<span class="prob-text"
+											style="font-size:9px; font-weight:700; margin-top:2px;">--%</span>
+									</div>
+									<div class="car-cell"><span class="car-no">3</span>
+										<div class="car-bar" style="background:#FFB627;"></div>
+										<span class="prob-text"
+											style="font-size:9px; font-weight:700; margin-top:2px;">--%</span>
+									</div>
+									<div class="car-cell"><span class="car-no">4</span>
+										<div class="car-bar" style="background:#FF8C42;"></div>
+										<span class="prob-text"
+											style="font-size:9px; font-weight:700; margin-top:2px;">--%</span>
+									</div>
+									<div class="car-cell"><span class="car-no">5</span>
+										<div class="car-bar" style="background:var(--severe);"></div>
+										<span class="prob-text"
+											style="font-size:9px; font-weight:700; margin-top:2px;">--%</span>
+									</div>
+									<div class="car-cell"><span class="car-no">6</span>
+										<div class="car-bar" style="background:#FF8C42;"></div>
+										<span class="prob-text"
+											style="font-size:9px; font-weight:700; margin-top:2px;">--%</span>
+									</div>
+									<div class="car-cell"><span class="car-no">7</span>
+										<div class="car-bar" style="background:#3DDC97;"></div>
+										<span class="prob-text"
+											style="font-size:9px; font-weight:700; margin-top:2px;">--%</span>
+									</div>
+									<div class="car-cell"><span class="car-no">8</span>
+										<div class="car-bar" style="background:#3DDC97;"></div>
+										<span class="prob-text"
+											style="font-size:9px; font-weight:700; margin-top:2px;">--%</span>
+									</div>
+								</div>
+								<div class="mini-legend">
+									<div class="item"><span class="sw" style="background:#3DDC97;"></span>여유</div>
+									<div class="item"><span class="sw" style="background:#FFB627;"></span>보통</div>
+									<div class="item"><span class="sw" style="background:#FF8C42;"></span>혼잡</div>
+									<div class="item"><span class="sw" style="background:var(--severe);"></span>매우혼잡
+									</div>
+								</div>
+								<button class="congestion-detail-btn"
+									onclick="alert('상세 시간표 및 전체 노선 현황판을 연동 중입니다.')">혼잡도/시간표</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</aside>
+
+		<!-- ================= MAP AREA ================= -->
+		<main class="map-area">
+			<div class="api-status" id="apiStatus"></div>
+
+			<!-- TMAP 렌더링 컨테이너 -->
+			<div id="tmapDiv"></div>
+
+			<div class="map-mock-layer" id="mapMockLayer">
+				<svg width="100%" height="100%" viewBox="0 0 800 700" preserveAspectRatio="xMidYMid slice"
+					style="position:absolute;inset:0;">
+					<g id="myLocationMarker" style="display:none;">
+						<circle cx="400" cy="350" r="20" fill="#4C5FD5" opacity="0.2" />
+						<circle cx="400" cy="350" r="8" fill="#4C5FD5" stroke="#fff" stroke-width="2" />
+						<text x="416" y="355" font-size="13" font-weight="700" fill="#1B1F3B" font-family="sans-serif">내
+							위치</text>
+					</g>
+				</svg>
+			</div>
+
+			<!-- 내 주변 정류장 SVG 영역 -->
+			<div class="nearby-stops-layer" id="nearbyStopsLayer">
+				<svg id="stopsSvg" width="100%" height="100%" viewBox="0 0 800 700"></svg>
+			</div>
+
+			<div class="map-controls">
+				<button onclick="locateMe()" title="내 위치"><svg viewBox="0 0 24 24" width="18" height="18"
+						stroke="currentColor" stroke-width="2" fill="none">
+						<circle cx="12" cy="12" r="3" />
+						<path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+					</svg></button>
+				<button onclick="zoomMap(1)">+</button>
+				<button onclick="zoomMap(-1)">&#8722;</button>
+			</div>
+			<div class="nearby-stops-btn" id="nearbyStopsBtn" onclick="toggleNearbyStops()">
+				<svg viewBox="0 0 24 24">
+					<rect x="4" y="4" width="16" height="14" rx="3" />
+					<path d="M4 13h16M8 18l-1.5 3M16 18l1.5 3M8 8h8" />
+				</svg>
+				내 주변 정류장
+			</div>
+			<div class="scale-chip">100m</div>
+			<div class="route-map-legend" id="routeMapLegend"></div>
+			<div class="weather-chip">
+				<svg viewBox="0 0 24 24">
+					<path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" />
+					<path d="M9 19l1.5 2M13 19l1.5 2M17 19l1.5 2" />
+				</svg>
+				<div>
+					<div class="temp" id="weatherTemp">--&deg;</div>
+					<div class="desc" id="weatherDesc">날씨 로딩중...</div>
+				</div>
+			</div>
+		</main>
+
+	</div>
+
+	<script>
+		var myLocationMarker = null;
+
+		/* 기본 목적별 여유시간 매핑 */
+		var defaultBufferMap = {
+			'school': 10,
+			'appointment': 15,
+			'work': 15,
+			'hospital': 20,
+			'etc': 5,
+			'ATTENDANCE': 10,
+			'APPOINTMENT': 15,
+			'COMMUTE': 15,
+			'HOSPITAL': 20,
+			'OTHER': 5
+		};
+
+		/* 목적 선택 변경 시 비회원 설정값 불러오기 */
+		function onPurposeChange() {
+			var selectEl = document.getElementById('purposeSelect');
+			if (!selectEl) return;
+			var selected = selectEl.value;
+			var savedCustomMap = JSON.parse(localStorage.getItem('userCustomBuffers')) || {};
+
+			var bufferVal = savedCustomMap[selected] !== undefined
+				? savedCustomMap[selected]
+				: (defaultBufferMap[selected] || 15);
+
+			var inputEl = document.getElementById('purposeBufferInput');
+			if (inputEl) inputEl.value = bufferVal;
+		}
+
+		/* 비회원이 여유시간 수동 변경 시 localStorage 저장 */
+		function saveCustomBuffer() {
+			var selectEl = document.getElementById('purposeSelect');
+			var inputEl = document.getElementById('purposeBufferInput');
+			if (!selectEl || !inputEl) return;
+
+			var selected = selectEl.value;
+			var inputVal = parseInt(inputEl.value, 10) || 0;
+
+			var savedCustomMap = JSON.parse(localStorage.getItem('userCustomBuffers')) || {};
+			savedCustomMap[selected] = inputVal;
+			localStorage.setItem('userCustomBuffers', JSON.stringify(savedCustomMap));
+		}
+
+		/* ================= 1. 레일 및 패널 제어 ================= */
+		function goRail(el, panelId) {
+			document.querySelectorAll('.rail-item').forEach(r => r.classList.remove('active'));
+			el.classList.add('active');
+			document.querySelectorAll('.panel').forEach(p => {p.classList.remove('active'); p.classList.remove('collapsed');});
+			document.getElementById(panelId).classList.add('active');
+			closeDetail();
+			updateToggle();
+
+			if (panelId === 'panel-transit') {
+				loadNotifications();
+			}
+		}
+
+		function togglePanel() {
+			var panel = document.querySelector('.panel.active');
+			if (!panel) return;
+
+			var willCollapse = !panel.classList.contains('collapsed');
+			panel.classList.toggle('collapsed', willCollapse);
+
+			setTimeout(function () {
+				if (tmapInstance) {
+					tmapInstance.resize();
+				}
+			}, 300);
+
+			if (willCollapse) {
+				closeDetail();
+			}
+			updateToggle();
+		}
+
+		function updateToggle() {
+			var panel = document.querySelector('.panel.active');
+			var toggle = document.getElementById('panelToggle');
+			if (!panel || !toggle) return;
+			var collapsed = panel.classList.contains('collapsed');
+			var railWidth = 84;
+			var panelWidth = collapsed ? 0 : 400;
+			toggle.style.left = (railWidth + panelWidth) + 'px';
+			toggle.classList.toggle('collapsed', collapsed);
+		}
+
+		/* ================= 2. 날짜/시간 및 달력 ================= */
+		function selectSegment(el, label) {
+			el.parentElement.querySelectorAll('button').forEach(function (b) {b.classList.remove('active');});
+			el.classList.add('active');
+			updateDatetimePillText();
+		}
+
+		function toggleDatetimePanel() {
+			var panel = document.getElementById('detailPanelInner');
+			var willOpen = !panel.classList.contains('open');
+			panel.classList.toggle('open');
+			document.getElementById('datetimePill').classList.toggle('open');
+			if (willOpen) {initCalFromHidden();}
+		}
+
+		var calState = {year: 2026, month: 6, day: 16, ampm: 'AM', hour: 12, minute: 0};
+
+		function calDaysInMonth(year, month) {return new Date(year, month + 1, 0).getDate();}
+
+		function initCalFromHidden() {
+			var dateVal = document.getElementById('tripDate').value;
+			var timeVal = document.getElementById('tripTime').value;
+			if (dateVal) {
+				var dp = dateVal.split('-').map(Number);
+				calState.year = dp[0]; calState.month = dp[1] - 1; calState.day = dp[2];
+			}
+			if (timeVal) {
+				var tp = timeVal.split(':').map(Number);
+				var h24 = tp[0];
+				calState.ampm = h24 < 12 ? 'AM' : 'PM';
+				var h12 = h24 % 12;
+				calState.hour = h12 === 0 ? 12 : h12;
+				calState.minute = tp[1];
+			}
+			renderCalendarUI();
+		}
+
+		function renderCalendarUI() {
+			document.getElementById('calYearMonth').textContent = calState.year + '년 ' + (calState.month + 1) + '월';
+			renderCalGrid();
+
+			document.getElementById('ampmAM').classList.toggle('active', calState.ampm === 'AM');
+			document.getElementById('ampmPM').classList.toggle('active', calState.ampm === 'PM');
+
+			var hourSelect = document.getElementById('calHour');
+			if (hourSelect.options.length === 0) {
+				for (var h = 1; h <= 12; h++) {
+					var opt = document.createElement('option');
+					opt.value = h; opt.textContent = h;
+					hourSelect.appendChild(opt);
+				}
+			}
+			hourSelect.value = calState.hour;
+
+			var minSelect = document.getElementById('calMinute');
+			if (minSelect.options.length === 0) {
+				for (var m = 0; m < 60; m++) {
+					var opt2 = document.createElement('option');
+					opt2.value = m; opt2.textContent = String(m).padStart(2, '0');
+					minSelect.appendChild(opt2);
+				}
+			}
+			minSelect.value = calState.minute;
+		}
+
+		function renderCalGrid() {
+			var grid = document.getElementById('calGrid');
+			grid.innerHTML = '';
+
+			var now = new Date();
+			var todayY = now.getFullYear(), todayM = now.getMonth(), todayD = now.getDate();
+			var maxDate = new Date(todayY + 1, todayM, todayD);
+
+			var firstWeekday = new Date(calState.year, calState.month, 1).getDay();
+			var totalDays = calDaysInMonth(calState.year, calState.month);
+
+			for (var i = 0; i < firstWeekday; i++) {
+				var empty = document.createElement('div');
+				empty.className = 'cal-day empty';
+				grid.appendChild(empty);
+			}
+
+			for (var d = 1; d <= totalDays; d++) {
+				var cell = document.createElement('div');
+				cell.className = 'cal-day';
+				cell.textContent = d;
+
+				var thisDate = new Date(calState.year, calState.month, d);
+				var isPast = thisDate < new Date(todayY, todayM, todayD);
+				var isBeyondMax = thisDate > maxDate;
+
+				if (isPast || isBeyondMax) {
+					cell.classList.add('disabled');
+				} else {
+					cell.onclick = (function (day) {
+						return function () {
+							calState.day = day;
+							renderCalGrid();
+						};
+					})(d);
+				}
+				if (calState.year === todayY && calState.month === todayM && d === todayD) {
+					cell.classList.add('today');
+				}
+				if (d === calState.day) {
+					cell.classList.add('selected');
+				}
+				grid.appendChild(cell);
+			}
+		}
+
+		function calShiftMonth(delta) {
+			var now = new Date();
+			var newMonth = calState.month + delta;
+			var newYear = calState.year;
+			if (newMonth < 0) {newMonth = 11; newYear--;}
+			if (newMonth > 11) {newMonth = 0; newYear++;}
+
+			var minBound = new Date(now.getFullYear(), now.getMonth(), 1);
+			var maxBound = new Date(now.getFullYear() + 1, now.getMonth(), 1);
+			var target = new Date(newYear, newMonth, 1);
+			if (target < minBound || target > maxBound) return;
+
+			calState.year = newYear;
+			calState.month = newMonth;
+			calState.day = Math.min(calState.day, calDaysInMonth(newYear, newMonth));
+			renderCalendarUI();
+		}
+
+		function calSetAmPm(period) {
+			calState.ampm = period;
+			document.getElementById('ampmAM').classList.toggle('active', period === 'AM');
+			document.getElementById('ampmPM').classList.toggle('active', period === 'PM');
+		}
+
+		function calUpdatePreview() { }
+
+		function applyDatetime() {
+			var mm = String(calState.month + 1).padStart(2, '0');
+			var dd = String(calState.day).padStart(2, '0');
+			document.getElementById('tripDate').value = calState.year + '-' + mm + '-' + dd;
+
+			var hour12 = parseInt(document.getElementById('calHour').value, 10);
+			var minute = parseInt(document.getElementById('calMinute').value, 10);
+			var ampm = document.getElementById('ampmAM').classList.contains('active') ? 'AM' : 'PM';
+			var hour24 = hour12 % 12;
+			if (ampm === 'PM') hour24 += 12;
+			document.getElementById('tripTime').value = String(hour24).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+
+			validateTripDateTime();
+			toggleDatetimePanel();
+		}
+
+		function useRecent(origin, dest) {
+			document.getElementById('originInput').value = origin;
+			document.getElementById('destInput').value = dest;
+			runSearch();
+		}
+
+		/* ================= 3. 약속방(ROOM) 기능 ================= */
+		function codeBoxInput(el) {
+			el.value = el.value.toUpperCase();
+			if (el.value) {
+				el.classList.add('filled');
+				var next = el.nextElementSibling;
+				if (next && next.classList.contains('code-box')) next.focus();
+			} else {
+				el.classList.remove('filled');
+			}
+		}
+		var isRoomHost = false;
+
+		function joinRoom() {
+			var boxes = document.querySelectorAll('#codeRow .code-box');
+			var code = '';
+			boxes.forEach(function (b) {code += b.value;});
+			if (code.length < 6) {
+				alert('초대 코드 6자리를 모두 입력해주세요.');
+				return;
+			}
+			isRoomHost = false;
+			updateRoomHostUI();
+			goRail(document.querySelector('[data-panel="panel-room-join"]'), 'panel-room-dash');
+		}
+		function createRoom() {
+			isRoomHost = true;
+			updateRoomHostUI();
+			goRail(document.querySelector('[data-panel="panel-room-join"]'), 'panel-room-dash');
+		}
+
+		function updateRoomHostUI() {
+			document.querySelectorAll('.host-only').forEach(function (el) {
+				el.style.display = isRoomHost ? 'inline-flex' : 'none';
+			});
+
+			var hostNameLabel = document.getElementById('hostNameLabel');
+			var hostTagMe = document.getElementById('hostTagMe');
+			var hostTagOther = document.getElementById('hostTagOther');
+			if (hostNameLabel) {
+				if (isRoomHost) {
+					hostNameLabel.textContent = '방장 (나)';
+					hostTagMe.style.display = 'inline-block';
+					hostTagOther.style.display = 'none';
+				} else {
+					hostNameLabel.textContent = '임시 방장';
+					hostTagMe.style.display = 'none';
+					hostTagOther.style.display = 'inline-block';
+				}
+			}
+		}
+
+		function copyInviteCode(el) {
+			var code = document.querySelector('.invite-row .code').textContent;
+			if (navigator.clipboard) {
+				navigator.clipboard.writeText(code).catch(function () { });
+			}
+			var original = el.textContent;
+			el.textContent = '복사됨 ✓';
+			setTimeout(function () {el.textContent = original;}, 1500);
+		}
+
+		var roomCalState = {year: 2026, month: 6, day: 16, ampm: 'PM', hour: 7, minute: 0};
+		var roomMeetDateStr = '2026-07-16';
+		var roomMeetTimeStr = '19:00';
+
+		function toggleRoomEdit() {
+			var infoView = document.getElementById('roomInfoView');
+			var editPanel = document.getElementById('roomEditPanel');
+			var opening = editPanel.style.display === 'none';
+			if (opening) {
+				document.getElementById('destEditInput').value = document.getElementById('destName').textContent;
+				var dp = roomMeetDateStr.split('-').map(Number);
+				roomCalState.year = dp[0]; roomCalState.month = dp[1] - 1; roomCalState.day = dp[2];
+				var tp = roomMeetTimeStr.split(':').map(Number);
+				var h24 = tp[0];
+				roomCalState.ampm = h24 < 12 ? 'AM' : 'PM';
+				var h12 = h24 % 12;
+				roomCalState.hour = h12 === 0 ? 12 : h12;
+				roomCalState.minute = tp[1];
+				renderRoomCalendarUI();
+				infoView.style.display = 'none';
+				editPanel.style.display = 'block';
+			} else {
+				infoView.style.display = 'block';
+				editPanel.style.display = 'none';
+			}
+		}
+
+		function renderRoomCalendarUI() {
+			document.getElementById('roomCalYearMonth').textContent = roomCalState.year + '년 ' + (roomCalState.month + 1) + '월';
+			renderRoomCalGrid();
+			document.getElementById('roomAmpmAM').classList.toggle('active', roomCalState.ampm === 'AM');
+			document.getElementById('roomAmpmPM').classList.toggle('active', roomCalState.ampm === 'PM');
+
+			var hourSelect = document.getElementById('roomCalHour');
+			if (hourSelect.options.length === 0) {
+				for (var h = 1; h <= 12; h++) {
+					var opt = document.createElement('option');
+					opt.value = h; opt.textContent = h;
+					hourSelect.appendChild(opt);
+				}
+			}
+			hourSelect.value = roomCalState.hour;
+
+			var minSelect = document.getElementById('roomCalMinute');
+			if (minSelect.options.length === 0) {
+				for (var m = 0; m < 60; m++) {
+					var opt2 = document.createElement('option');
+					opt2.value = m; opt2.textContent = String(m).padStart(2, '0');
+					minSelect.appendChild(opt2);
+				}
+			}
+			minSelect.value = roomCalState.minute;
+		}
+
+		function renderRoomCalGrid() {
+			var grid = document.getElementById('roomCalGrid');
+			grid.innerHTML = '';
+
+			var now = new Date();
+			var todayY = now.getFullYear(), todayM = now.getMonth(), todayD = now.getDate();
+			var maxDate = new Date(todayY + 1, todayM, todayD);
+
+			var firstWeekday = new Date(roomCalState.year, roomCalState.month, 1).getDay();
+			var totalDays = calDaysInMonth(roomCalState.year, roomCalState.month);
+
+			for (var i = 0; i < firstWeekday; i++) {
+				var empty = document.createElement('div');
+				empty.className = 'cal-day empty';
+				grid.appendChild(empty);
+			}
+			for (var d = 1; d <= totalDays; d++) {
+				var cell = document.createElement('div');
+				cell.className = 'cal-day';
+				cell.textContent = d;
+
+				var thisDate = new Date(roomCalState.year, roomCalState.month, d);
+				var isPast = thisDate < new Date(todayY, todayM, todayD);
+				var isBeyondMax = thisDate > maxDate;
+
+				if (isPast || isBeyondMax) {
+					cell.classList.add('disabled');
+				} else {
+					cell.onclick = (function (day) {
+						return function () {roomCalState.day = day; renderRoomCalGrid();};
+					})(d);
+				}
+				if (roomCalState.year === todayY && roomCalState.month === todayM && d === todayD) {
+					cell.classList.add('today');
+				}
+				if (d === roomCalState.day) {
+					cell.classList.add('selected');
+				}
+				grid.appendChild(cell);
+			}
+		}
+
+		function roomCalShiftMonth(delta) {
+			var now = new Date();
+			var newMonth = roomCalState.month + delta;
+			var newYear = roomCalState.year;
+			if (newMonth < 0) {newMonth = 11; newYear--;}
+			if (newMonth > 11) {newMonth = 0; newYear++;}
+
+			var minBound = new Date(now.getFullYear(), now.getMonth(), 1);
+			var maxBound = new Date(now.getFullYear() + 1, now.getMonth(), 1);
+			var target = new Date(newYear, newMonth, 1);
+			if (target < minBound || target > maxBound) return;
+
+			roomCalState.year = newYear;
+			roomCalState.month = newMonth;
+			roomCalState.day = Math.min(roomCalState.day, calDaysInMonth(newYear, newMonth));
+			renderRoomCalendarUI();
+		}
+
+		function roomCalSetAmPm(period) {
+			roomCalState.ampm = period;
+			document.getElementById('roomAmpmAM').classList.toggle('active', period === 'AM');
+			document.getElementById('roomAmpmPM').classList.toggle('active', period === 'PM');
+		}
+
+		function saveRoomEdit() {
+			var destVal = document.getElementById('destEditInput').value.trim();
+			if (destVal === '') {
+				alert('목적지를 입력하세요.');
+				return;
+			}
+
+			var mm = String(roomCalState.month + 1).padStart(2, '0');
+			var dd = String(roomCalState.day).padStart(2, '0');
+			roomMeetDateStr = roomCalState.year + '-' + mm + '-' + dd;
+
+			var hour12 = parseInt(document.getElementById('roomCalHour').value, 10);
+			var minute = parseInt(document.getElementById('roomCalMinute').value, 10);
+			var ampm = document.getElementById('roomAmpmAM').classList.contains('active') ? 'AM' : 'PM';
+			var hour24 = hour12 % 12;
+			if (ampm === 'PM') hour24 += 12;
+			roomMeetTimeStr = String(hour24).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+
+			document.getElementById('destName').textContent = destVal;
+
+			var days = ['일', '월', '화', '수', '목', '금', '토'];
+			var d = new Date(roomCalState.year, roomCalState.month, roomCalState.day);
+			var ampmLabel = ampm === 'AM' ? '오전' : '오후';
+			document.getElementById('meetDateTimeLabel').textContent =
+				(roomCalState.month + 1) + '월 ' + roomCalState.day + '일 (' + days[d.getDay()] + ') ' + ampmLabel + ' ' + hour12 + ':' + String(minute).padStart(2, '0');
+
+			document.getElementById('roomInfoView').style.display = 'block';
+			document.getElementById('roomEditPanel').style.display = 'none';
+		}
+
+		function inviteMore() {
+			var code = document.querySelector('.invite-row .code').textContent;
+			alert('초대 코드 [' + code + ']를 공유해서 참여자를 초대하세요.');
+		}
+
+		/* ================= 4. 계정 UI 제어 ================= */
+		function showAccountView(view) {
+			document.getElementById('accountLogin').style.display = (view === 'login') ? 'block' : 'none';
+			document.getElementById('accountSignup').style.display = (view === 'signup') ? 'block' : 'none';
+			document.getElementById('accountInfo').style.display = (view === 'info') ? 'block' : 'none';
+		}
+
+		function applyAccountInfo(email, nickname) {
+			var name = nickname && nickname.trim() ? nickname.trim() : (email.split('@')[0] || '사용자');
+			document.getElementById('accountGreeting').textContent = name + '님, 안녕하세요';
+			document.getElementById('accountNickname').textContent = name;
+			document.getElementById('accountEmail').textContent = email;
+			document.getElementById('accountAvatar').textContent = name.charAt(0);
+		}
+
+		/* ================= 5. 자동완성 및 경유지 ================= */
+		var selectedPlaces = {};
+		var suggestionTimers = {};
+		var suggestionControllers = {};
+
+		function showSuggestions(inputEl) {
+			var listEl = document.getElementById(inputEl.id + 'List');
+			if (!listEl) return;
+
+			document.querySelectorAll('.autocomplete-list').forEach(function (el) {
+				if (el !== listEl) {
+					el.classList.remove('show');
+					el.innerHTML = '';
+				}
+			});
+
+			var q = inputEl.value.trim();
+			if (selectedPlaces[inputEl.id] && selectedPlaces[inputEl.id].name !== q) {
+				delete selectedPlaces[inputEl.id];
+			}
+			clearTimeout(suggestionTimers[inputEl.id]);
+			if (q.length < 2) {
+				listEl.classList.remove('show');
+				listEl.innerHTML = '';
+				return;
+			}
+
+			listEl.innerHTML = '<div class="autocomplete-state">장소를 검색하고 있습니다...</div>';
+			listEl.classList.add('show');
+			suggestionTimers[inputEl.id] = setTimeout(async function () {
+				if (suggestionControllers[inputEl.id]) suggestionControllers[inputEl.id].abort();
+				var controller = new AbortController();
+				suggestionControllers[inputEl.id] = controller;
+				try {
+					var response = await fetch('/api/places/suggest?keyword=' + encodeURIComponent(q), {
+						signal: controller.signal
+					});
+					if (!response.ok) throw new Error('장소 검색 실패');
+					var places = await response.json();
+					if (inputEl.value.trim() !== q) return;
+					renderPlaceSuggestions(inputEl, listEl, places);
+				} catch (error) {
+					if (error.name === 'AbortError') return;
+					listEl.innerHTML = '<div class="autocomplete-state">검색 결과를 불러오지 못했습니다.</div>';
+				}
+			}, 250);
+		}
+
+		function renderPlaceSuggestions(inputEl, listEl, places) {
+			listEl.innerHTML = '';
+			if (!places || places.length === 0) {
+				listEl.innerHTML = '<div class="autocomplete-state">검색 결과가 없습니다.</div>';
+				listEl.classList.add('show');
+				return;
+			}
+			places.forEach(function (place) {
+				var item = document.createElement('div');
+				item.className = 'autocomplete-item';
+
+				var nameRow = document.createElement('div');
+				nameRow.className = 'place-name';
+				nameRow.appendChild(document.createTextNode('⌖ ' + place.name));
+				if (place.category) {
+					var category = document.createElement('span');
+					category.className = 'place-category';
+					category.textContent = place.category;
+					nameRow.appendChild(category);
+				}
+
+				var address = document.createElement('div');
+				address.className = 'place-address';
+				address.textContent = place.address || '주소 정보 없음';
+				item.appendChild(nameRow);
+				item.appendChild(address);
+				item.addEventListener('mousedown', function (event) {
+					event.preventDefault();
+					selectSuggestion(inputEl.id, place);
+				});
+				listEl.appendChild(item);
+			});
+			listEl.classList.add('show');
+		}
+
+		function selectSuggestion(inputId, place) {
+			document.getElementById(inputId).value = place.name;
+			selectedPlaces[inputId] = place;
+			hideAllSuggestions();
+		}
+
+		function hideAllSuggestions() {
+			document.querySelectorAll('.autocomplete-list').forEach(function (el) {
+				el.classList.remove('show');
+				el.innerHTML = '';
+			});
+		}
+
+		document.addEventListener('click', function (e) {
+			if (!e.target.closest('.field-row') && !e.target.closest('.waypoint-row')) {
+				hideAllSuggestions();
+			}
+		});
+
+		function swapFields() {
+			var origin = document.getElementById('originInput');
+			var dest = document.getElementById('destInput');
+			var tmp = origin.value;
+			origin.value = dest.value;
+			dest.value = tmp;
+			var tmpPlace = selectedPlaces.originInput;
+			selectedPlaces.originInput = selectedPlaces.destInput;
+			selectedPlaces.destInput = tmpPlace;
+		}
+
+		var waypointCount = 0;
+		var MAX_WAYPOINTS = 5;
+
+		function addWaypoint() {
+			if (waypointCount >= MAX_WAYPOINTS) return;
+			waypointCount++;
+			var id = 'waypointInput' + waypointCount;
+			var row = document.createElement('div');
+			row.className = 'waypoint-row';
+			row.id = 'waypointRow' + waypointCount;
+			row.innerHTML =
+				'<div class="field-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg></div>' +
+				'<input type="text" id="' + id + '" class="waypoint-input" placeholder="경유지 ' + waypointCount + '" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">' +
+				'<div class="swap-btn" onclick="removeWaypoint(\'' + row.id + '\')"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div>' +
+				'<div class="autocomplete-list" id="' + id + 'List"></div>';
+			document.getElementById('waypointList').appendChild(row);
+			document.getElementById(id).focus();
+			updateAddWaypointVisibility();
+		}
+
+		function removeWaypoint(rowId) {
+			var row = document.getElementById(rowId);
+			if (row) row.remove();
+			updateAddWaypointVisibility();
+		}
+
+		function updateAddWaypointVisibility() {
+			var count = document.querySelectorAll('#waypointList .waypoint-row').length;
+			document.getElementById('addWaypointLink').style.display = count >= MAX_WAYPOINTS ? 'none' : 'block';
+		}
+
+		/* ================= 6. 백엔드 연동 길찾기 (runSearch) ================= */
+		async function getCoordsByPOI(keyword, inputId) {
+			const selected = selectedPlaces[inputId];
+			if (selected && selected.name === keyword) {
+				return {lat: Number(selected.lat), lng: Number(selected.lng)};
+			}
+
+			const response = await fetch(`/api/places/suggest?keyword=${encodeURIComponent(keyword)}`);
+			if (!response.ok) throw new Error("장소 검색 서버 응답 오류");
+			const places = await response.json();
+			if (!places || places.length === 0) throw new Error(`'${keyword}' 검색 결과가 없습니다.`);
+
+			const place = places[0];
+			selectedPlaces[inputId] = place;
+			document.getElementById(inputId).value = place.name;
+			return {lat: Number(place.lat), lng: Number(place.lng)};
+		}
+
+		async function searchOdsayFromBrowser(start, end) {
+			const params = new URLSearchParams({
+				SX: String(start.lng),
+				SY: String(start.lat),
+				EX: String(end.lng),
+				EY: String(end.lat),
+				OPT: "0",
+				apiKey: "VuH9fmjFMsn0k5jpBaSn6g"
+			});
+			const apiResponse = await fetch(`https://api.odsay.com/v1/api/searchPubTransPathT?${params.toString()}`);
+			const response = await apiResponse.json();
+
+			if (!apiResponse.ok || !response || !response.result || !response.result.path || !response.result.path.length) {
+				const apiMessage = response && response.error && response.error[0]
+					? response.error[0].message
+					: "검색된 대중교통 경로가 없습니다.";
+				throw new Error(apiMessage);
+			}
+
+			const best = response.result.path[0];
+			const info = best.info || {};
+			const segments = (best.subPath || []).map(sub => {
+						const mode = sub.trafficType === 1 ? "SUBWAY" : (sub.trafficType === 2 ? "BUS" : "WALK");
+						const lane = sub.lane && sub.lane.length ? sub.lane[0] : {};
+						const stations = sub.passStopList && sub.passStopList.stations
+							? sub.passStopList.stations
+							: [];
+						const geometry = stations.map(station => ({
+							lat: Number(station.y),
+							lng: Number(station.x)
+						})).filter(point => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+
+						if (geometry.length === 0 && sub.startX && sub.startY && sub.endX && sub.endY) {
+							geometry.push(
+								{lat: Number(sub.startY), lng: Number(sub.startX)},
+								{lat: Number(sub.endY), lng: Number(sub.endX)}
+							);
+						}
+
+						return {
+							mode,
+							time: Math.max(Number(sub.sectionTime) || 1, 1),
+							distance: Number(sub.distance) || 0,
+							routeLine: lane.name || lane.busNo || (mode === "WALK" ? "도보" : "대중교통"),
+							routeColor: lane.busColor ? `#${lane.busColor}` : null,
+							routeType: Number(lane.type || sub.type) || 0,
+							startName: sub.startName || (stations[0] && stations[0].stationName) || "출발지",
+							endName: sub.endName || (stations.length && stations[stations.length - 1].stationName) || "도착지",
+							geometry
+						};
+			});
+
+			return {
+				provider: "ODsay",
+				totalTimeMinutes: Number(info.totalTime) || 0,
+				transferCount: Math.max(
+					(Number(info.busTransitCount) || 0) + (Number(info.subwayTransitCount) || 0) - 1,
+					0
+				),
+				totalWalkMinutes: segments
+					.filter(segment => segment.mode === "WALK")
+					.reduce((sum, segment) => sum + segment.time, 0),
+				fare: Number(info.payment) || 0,
+				segments
+			};
+		}
+
+		async function runSearch() {
+			try {
+				const origin = document.getElementById('originInput').value.trim();
+				const dest = document.getElementById('destInput').value.trim();
+
+				if (!origin || !dest) {
+					alert("출발지와 목적지를 모두 입력해주세요.");
+					return;
+				}
+
+				// 1. POI 좌표 검색
+				let startLatLng, endLatLng;
+				try {
+					startLatLng = await getCoordsByPOI(origin, 'originInput');
+					endLatLng = await getCoordsByPOI(dest, 'destInput');
+				} catch (poiError) {
+					console.error("장소 검색 실패:", poiError);
+					alert("장소 검색에 실패했습니다.\n" + poiError.message);
+					return;
+				}
+
+				// 2. 백엔드 대중교통 상세 구간 정보(segments) 조회
+				let transitData = null;
+				try {
+					const transitRes = await fetch(`/api/search?origin=${encodeURIComponent(origin)}&dest=${encodeURIComponent(dest)}`);
+					if (transitRes.ok) {
+						transitData = await transitRes.json();
+						if (transitData.error || !transitData.segments || transitData.segments.length === 0) {
+							console.warn("TMAP 경로 조회 실패, ODsay로 전환:", transitData.errorDetail || transitData.error);
+							transitData = await searchOdsayFromBrowser(startLatLng, endLatLng);
+						}
+					}
+				} catch (transitErr) {
+					console.error("대중교통 상세 정보 API 수신 실패:", transitErr);
+					alert("대중교통 경로를 불러오지 못했습니다.\n" + (transitErr.message || "API 키와 사용 한도를 확인해주세요."));
+					return;
+				}
+
+				const dateVal = document.getElementById('tripDate').value;
+				const timeVal = document.getElementById('tripTime').value;
+
+				const isArrival = document.getElementById('modeArrival').classList.contains('active');
+				const targetType = isArrival ? "arrival" : "departure";
+				const selectedPurpose = document.getElementById('purposeSelect').value || "APPOINTMENT";
+				const userPurposeBuffer = parseInt(document.getElementById('purposeBufferInput').value, 10) || 15;
+
+				// 3. 백엔드 추천 출발 시간 연산 API 호출
+				const recommendPayload = {
+					userId: 1,
+					startName: origin,
+					startAddress: origin,
+					startLatitude: startLatLng.lat,
+					startLongitude: startLatLng.lng,
+					destinationName: dest,
+					destinationAddress: dest,
+					destinationLatitude: endLatLng.lat,
+					destinationLongitude: endLatLng.lng,
+					targetType: targetType,
+					targetDateTime: `${dateVal}T${timeVal}:00`,
+					purposeCode: selectedPurpose,
+					preferredTransport: "public_transport",
+					baseTravelMinutes: (transitData && transitData.totalTimeMinutes) ? transitData.totalTimeMinutes : 40,
+					personalBufferMinutes: 5,
+					requestClient: "web"
+				};
+
+				const response = await fetch('/api/departure/recommend', {
+					method: 'POST',
+					headers: {'Content-Type': 'application/json'},
+					body: JSON.stringify(recommendPayload)
+				});
+
+				let data;
+				if (response.ok) {
+					data = await response.json();
+				} else {
+					const travelMin = (transitData && transitData.totalTimeMinutes) ? transitData.totalTimeMinutes : 45;
+					const [h, m] = timeVal.split(':').map(Number);
+					let departTime = timeVal;
+					let arriveTime = timeVal;
+
+					if (targetType === "arrival") {
+						let totalMin = h * 60 + m - travelMin - userPurposeBuffer;
+						if (totalMin < 0) totalMin += 1440;
+						let dh = String(Math.floor(totalMin / 60)).padStart(2, '0');
+						let dm = String(totalMin % 60).padStart(2, '0');
+						departTime = `${dh}:${dm}`;
+						arriveTime = timeVal;
+					} else {
+						let totalMin = h * 60 + m + travelMin + userPurposeBuffer;
+						let ah = String(Math.floor(totalMin / 60) % 24).padStart(2, '0');
+						let am = String(totalMin % 60).padStart(2, '0');
+						departTime = timeVal;
+						arriveTime = `${ah}:${am}`;
+					}
+
+					data = {
+						recommendedDepartureTime: departTime,
+						expectedArrivalTime: arriveTime,
+						baseTravelMinutes: travelMin,
+						purposeBufferMinutes: userPurposeBuffer,
+						personalBufferMinutes: 5,
+						recommendationSummary: "현재 시각 및 대중교통 혼잡도를 반영하여 계산된 최적 경로입니다."
+					};
+				}
+
+				document.getElementById('resultBlock').classList.add('show');
+
+				// HH:mm 시간 포맷 추출 함수 ("2026-07-23T21:31" -> "21:31")
+				const formatHHMM = (timeStr) => {
+					if (!timeStr) return "--:--";
+					if (timeStr.includes("T")) {
+						return timeStr.split("T")[1].substring(0, 5);
+					}
+					return timeStr.substring(0, 5);
+				};
+
+				const displayDepart = formatHHMM(data.recommendedDepartureTime) || timeVal;
+				const displayArrive = formatHHMM(data.expectedArrivalTime) || timeVal;
+
+				const t1El = document.querySelector('.route-times .t1');
+				const t2El = document.querySelector('.route-times .t2');
+
+				t1El.textContent = displayDepart;
+				t2El.textContent = displayArrive;
+
+				if (targetType === "arrival") {
+					t1El.style.color = "var(--muted)";
+					t2El.style.color = "var(--ink)";
+				} else {
+					t1El.style.color = "var(--ink)";
+					t2El.style.color = "var(--muted)";
+				}
+
+				const routeFacts = [
+					`총 ${transitData.totalTimeMinutes}분`,
+					`환승 ${transitData.transferCount || 0}회`,
+					`도보 ${transitData.totalWalkMinutes || 0}분`,
+					transitData.fare ? `${Number(transitData.fare).toLocaleString('ko-KR')}원` : null
+				].filter(Boolean).join(' · ');
+				document.getElementById('routeSubText').textContent = routeFacts;
+
+				const moveTimeBox = document.querySelector('.stat-box:nth-child(3) .v');
+				if (moveTimeBox) moveTimeBox.textContent = (data.baseTravelMinutes || 45) + "분";
+
+				document.getElementById('resultOriginText').textContent = origin;
+				document.getElementById('resultDestText').textContent = dest;
+
+				document.getElementById('detailDepartTime').textContent = displayDepart;
+				document.getElementById('detailArriveTime').textContent = displayArrive;
+
+				// 4. [대중교통 타임라인 렌더링] 혼잡도 바(1~8호차) 포함 동적 생성
+				if (transitData && transitData.segments && transitData.segments.length > 0) {
+					const transitSegments = transitData.segments.filter(seg => seg.mode !== 'WALK');
+					const summaryRoute = transitSegments.length
+						? transitSegments.map(seg => {
+							const icon = seg.mode === 'SUBWAY' ? '🚇' : (seg.mode === 'TRAIN' ? '🚆' : '🚌');
+							return `<span class="route-chip">${icon} ${seg.routeLine || '대중교통'}</span>`;
+						}).join('<span class="arrow">→</span>')
+						: '<span class="route-chip">🚶 도보 이동</span>';
+					document.querySelector('#detailTransportSummary .route').innerHTML = summaryRoute;
+
+					const timelineBox = document.querySelector('.timeline-box');
+					if (timelineBox) {
+						let html = `<div class="tl-station"><span class="tl-dot"></span><span class="tl-label">${origin}</span></div>`;
+
+						transitData.segments.forEach((seg, segmentIndex) => {
+							if (seg.mode === 'WALK') {
+								html += `
+											<div class="tl-row">
+												<div class="tl-mode"><div class="tl-mode-badge walk">🚶</div><div class="tl-mode-time">${seg.time}분</div></div>
+												<div class="tl-content"><div class="walk-card">🚶 ${seg.startName || '출발지'}에서 ${seg.endName || '다음 승차 지점'}까지 도보 ${seg.time}분${seg.distance ? ` · ${seg.distance}m` : ''}</div></div>
+											</div>`;
+							} else if (seg.mode === 'BUS') {
+								html += `
+											<div class="tl-row">
+												<div class="tl-mode"><div class="tl-mode-badge bus" style="background:var(--orange);">🚌</div><div class="tl-mode-time">${seg.time}분</div></div>
+												<div class="tl-content">
+													<div class="transit-card" style="padding: 12px 14px;">
+														<div class="head" style="margin-bottom: 0;">
+															<div class="badge bus" style="background:var(--orange); width:24px; height:24px; font-size:12px;">🚌</div>
+															<h3 style="font-size:13.5px;"><b>${seg.routeLine || '버스'} 버스</b> · ${seg.time}분</h3>
+														</div>
+														<div class="ride-route">
+															<span class="label">승차</span><span class="place">${seg.startName || '출발 정류장'}</span>
+															<span class="label">하차</span><span class="place">${seg.endName || '도착 정류장'}</span>
+														</div>
+													</div>
+												</div>
+											</div>`;
+							} else if (seg.mode === 'SUBWAY') {
+								html += `
+																			<div class="tl-row">
+																				<div class="tl-mode"><div class="tl-mode-badge subway">🚇</div><div class="tl-mode-time">${seg.time}분</div></div>
+																				<div class="tl-content">
+																					<div class="transit-card subway-segment-card" id="subwaySegment${segmentIndex}">
+																						<div class="head">
+																							<div class="badge subway">🚇</div>
+																							<h3><b>${seg.routeLine || '지하철'}</b> · ${seg.time}분</h3>
+																						</div>
+																						<div class="ride-route">
+																							<span class="label">승차</span><span class="place">${seg.startName || '출발역'}</span>
+																							<span class="label">하차</span><span class="place">${seg.endName || '도착역'}</span>
+																						</div>
+																						<div class="car-dir-note">진입 예정 열차 칸별 데이터 수신 완료</div>
+																						<div class="cars">
+																							<div class="car-cell"><span class="car-no">1</span><div class="car-bar" style="background:#3DDC97;"></div><span class="prob-text" style="font-size:9px; font-weight:700; margin-top:2px;">--%</span></div>
+																							<div class="car-cell"><span class="car-no">2</span><div class="car-bar" style="background:#3DDC97;"></div><span class="prob-text" style="font-size:9px; font-weight:700; margin-top:2px;">--%</span></div>
+																							<div class="car-cell"><span class="car-no">3</span><div class="car-bar" style="background:#FFB627;"></div><span class="prob-text" style="font-size:9px; font-weight:700; margin-top:2px;">--%</span></div>
+																							<div class="car-cell"><span class="car-no">4</span><div class="car-bar" style="background:#FF8C42;"></div><span class="prob-text" style="font-size:9px; font-weight:700; margin-top:2px;">--%</span></div>
+																							<div class="car-cell"><span class="car-no">5</span><div class="car-bar" style="background:var(--severe);"></div><span class="prob-text" style="font-size:9px; font-weight:700; margin-top:2px;">--%</span></div>
+																							<div class="car-cell"><span class="car-no">6</span><div class="car-bar" style="background:#FF8C42;"></div><span class="prob-text" style="font-size:9px; font-weight:700; margin-top:2px;">--%</span></div>
+																							<div class="car-cell"><span class="car-no">7</span><div class="car-bar" style="background:#3DDC97;"></div><span class="prob-text" style="font-size:9px; font-weight:700; margin-top:2px;">--%</span></div>
+																							<div class="car-cell"><span class="car-no">8</span><div class="car-bar" style="background:#3DDC97;"></div><span class="prob-text" style="font-size:9px; font-weight:700; margin-top:2px;">--%</span></div>
+																						</div>
+																						<div class="mini-legend">
+																							<div class="item"><span class="sw" style="background:#3DDC97;"></span>여유</div>
+																							<div class="item"><span class="sw" style="background:#FFB627;"></span>보통</div>
+																							<div class="item"><span class="sw" style="background:#FF8C42;"></span>혼잡</div>
+																							<div class="item"><span class="sw" style="background:var(--severe);"></span>매우혼잡</div>
+																						</div>
+																					</div>
+																				</div>
+																			</div>`;
+							} else {
+								const modeIcon = seg.mode === 'TRAIN' ? '🚆' : '🚌';
+								html += `
+											<div class="tl-row">
+												<div class="tl-mode"><div class="tl-mode-badge bus">${modeIcon}</div><div class="tl-mode-time">${seg.time}분</div></div>
+												<div class="tl-content">
+													<div class="transit-card" style="padding: 12px 14px;">
+														<div class="head" style="margin-bottom: 0;">
+															<div class="badge bus">${modeIcon}</div>
+															<h3><b>${seg.routeLine || '대중교통'}</b> · ${seg.time}분</h3>
+														</div>
+														<div class="ride-route">
+															<span class="label">승차</span><span class="place">${seg.startName || '출발 지점'}</span>
+															<span class="label">하차</span><span class="place">${seg.endName || '도착 지점'}</span>
+														</div>
+													</div>
+												</div>
+											</div>`;
+							}
+						});
+
+						html += `<div class="tl-station"><span class="tl-dot end"></span><span class="tl-label">${dest}</span></div>`;
+						timelineBox.innerHTML = html;
+						transitData.segments.forEach((segment, segmentIndex) => {
+							if (segment.mode !== 'SUBWAY') return;
+							const card = document.getElementById(`subwaySegment${segmentIndex}`);
+							if (card) updateCongestionInfo(segment.startName, card);
+						});
+					}
+				}
+
+				// 추천 이유 스택바 연산
+				const baseMin = data.baseTravelMinutes || 30;
+				const waitMin = 4;
+				const congestionMin = 6;
+				const weatherMin = 3;
+				const trafficMin = 5;
+				const purposeMin = userPurposeBuffer;
+				const personalMin = data.personalBufferMinutes || 5;
+
+				const totalSum = baseMin + waitMin + congestionMin + weatherMin + trafficMin + purposeMin + personalMin;
+
+				const stackbarDivs = document.querySelectorAll('.stackbar div');
+				if (stackbarDivs.length >= 7) {
+					stackbarDivs[0].style.width = ((baseMin / totalSum) * 100) + '%';
+					stackbarDivs[1].style.width = ((waitMin / totalSum) * 100) + '%';
+					stackbarDivs[2].style.width = ((congestionMin / totalSum) * 100) + '%';
+					stackbarDivs[3].style.width = ((weatherMin / totalSum) * 100) + '%';
+					stackbarDivs[4].style.width = ((trafficMin / totalSum) * 100) + '%';
+					stackbarDivs[5].style.width = ((purposeMin / totalSum) * 100) + '%';
+					stackbarDivs[6].style.width = ((personalMin / totalSum) * 100) + '%';
+				}
+
+				const legendItems = document.querySelectorAll('.legend .item');
+				if (legendItems.length >= 7) {
+					legendItems[0].innerHTML = `<span class="sw" style="background:#2D6A6A;"></span>기본 이동 ${baseMin}분`;
+					legendItems[1].innerHTML = `<span class="sw" style="background:#3DDC97;"></span>대기 ${waitMin}분`;
+					legendItems[2].innerHTML = `<span class="sw" style="background:#FF6B57;"></span>혼잡도 보정 ${congestionMin}분`;
+					legendItems[3].innerHTML = `<span class="sw" style="background:#FFB627;"></span>날씨 보정 ${weatherMin}분`;
+					legendItems[4].innerHTML = `<span class="sw" style="background:#FF8C42;"></span>교통 보정 ${trafficMin}분`;
+					legendItems[5].innerHTML = `<span class="sw" style="background:#8B90A8;"></span>목적 여유 ${purposeMin}분`;
+					legendItems[6].innerHTML = `<span class="sw" style="background:#1B1F3B;"></span>개인 여유 ${personalMin}분`;
+				}
+
+				// 지도 경로 표시 및 혼잡도 업데이트
+				updateMapRouteWithCoords(startLatLng, endLatLng, origin, dest, transitData);
+				const firstSubway = transitData.segments.find(segment => segment.mode === 'SUBWAY');
+				if (!firstSubway) updateCongestionInfo(dest);
+
+			} catch (e) {
+				console.error("경로 탐색 중 오류:", e);
+				alert("경로 탐색 실패: " + e.message);
+			}
+		}
+
+		function getTransitColor(segment) {
+			if (segment.mode === 'WALK') return '#8B90A8';
+
+			const route = String(segment.routeLine || '').replace(/\s/g, '').toLowerCase();
+			if (segment.mode === 'SUBWAY') {
+				const subwayColors = [
+					{keywords: ['신분당'], color: '#D4003B'},
+					{keywords: ['수인분당', '분당선'], color: '#FABE00'},
+					{keywords: ['경의중앙'], color: '#77C4A3'},
+					{keywords: ['공항철도'], color: '#0090D2'},
+					{keywords: ['경춘'], color: '#0C8E72'},
+					{keywords: ['서해'], color: '#8FC31F'},
+					{keywords: ['김포골드'], color: '#A17800'},
+					{keywords: ['우이신설'], color: '#B7C452'},
+					{keywords: ['신림'], color: '#6789CA'},
+					{keywords: ['1호선'], color: '#0052A4'},
+					{keywords: ['2호선'], color: '#00A84D'},
+					{keywords: ['3호선'], color: '#EF7C1C'},
+					{keywords: ['4호선'], color: '#00A5DE'},
+					{keywords: ['5호선'], color: '#996CAC'},
+					{keywords: ['6호선'], color: '#CD7C2F'},
+					{keywords: ['7호선'], color: '#747F00'},
+					{keywords: ['8호선'], color: '#E6186C'},
+					{keywords: ['9호선'], color: '#BDB092'}
+				];
+				const matched = subwayColors.find(item => item.keywords.some(keyword => route.includes(keyword)));
+				if (matched) return matched.color;
+			}
+
+			if (segment.mode === 'BUS') {
+				const type = Number(segment.routeType) || 0;
+				if (type === 3 || route.includes('마을')) return '#43A047';
+				if ([4, 14].includes(type) || route.includes('광역') || route.includes('직행')) return '#D32F2F';
+				if ([2].includes(type) || route.includes('좌석')) return '#1565C0';
+				if ([6, 15].includes(type) || route.includes('급행')) return '#E65100';
+				if (type === 12 || route.includes('지선')) return '#43A047';
+				if (type === 11 || route.includes('간선')) return '#1976D2';
+				return '#1976D2';
+			}
+
+			if (/^#[0-9a-f]{6}$/i.test(segment.routeColor || '')) return segment.routeColor;
+			if (segment.mode === 'TRAIN') return '#7C3AED';
+			return '#F97316';
+		}
+
+		function getTransitLegendLabel(segment) {
+			if (segment.mode === 'WALK') return '도보';
+			if (segment.mode === 'SUBWAY') return segment.routeLine || '지하철';
+			if (segment.mode === 'BUS') {
+				const type = Number(segment.routeType) || 0;
+				let category = '시내버스';
+				if (type === 3 || String(segment.routeLine).includes('마을')) category = '마을버스';
+				else if ([4, 14].includes(type)) category = '광역버스';
+				else if (type === 2) category = '좌석버스';
+				else if ([6, 15].includes(type)) category = '급행버스';
+				else if (type === 12) category = '지선버스';
+				else if (type === 11) category = '간선버스';
+				return `${segment.routeLine || '버스'} · ${category}`;
+			}
+			return segment.routeLine || '대중교통';
+		}
+
+		function renderRouteMapLegend(segments) {
+			const legend = document.getElementById('routeMapLegend');
+			const unique = [];
+			(segments || []).forEach(segment => {
+				const label = getTransitLegendLabel(segment);
+				if (!unique.some(item => item.label === label)) {
+					unique.push({label, color: getTransitColor(segment)});
+				}
+			});
+			legend.innerHTML = '';
+			unique.forEach(item => {
+				const row = document.createElement('span');
+				row.className = 'route-legend-item';
+				const line = document.createElement('span');
+				line.className = 'route-legend-line';
+				line.style.background = item.color;
+				row.appendChild(line);
+				row.appendChild(document.createTextNode(item.label));
+				legend.appendChild(row);
+			});
+			legend.classList.toggle('show', unique.length > 0);
+		}
+
+		async function updateMapRouteWithCoords(start, end, origin, dest, transitData) {
+			if (!window.Tmapv2 || !tmapInstance) return;
+
+			var startPos = new window.Tmapv2.LatLng(start.lat, start.lng);
+			var endPos = new window.Tmapv2.LatLng(end.lat, end.lng);
+
+			// 기존 마커 및 경로선 제거
+			if (markerStart) markerStart.setMap(null);
+			if (markerEnd) markerEnd.setMap(null);
+			clearRouteLines();
+
+			// 출발지 / 목적지 마커 생성
+			markerStart = new window.Tmapv2.Marker({
+				position: startPos,
+				map: tmapInstance,
+				icon: "https://apis.openapi.sk.com/tmap/images/pin_b_m_s.png",
+				title: "출발지: " + origin
+			});
+
+			markerEnd = new window.Tmapv2.Marker({
+				position: endPos,
+				map: tmapInstance,
+				icon: "https://apis.openapi.sk.com/tmap/images/pin_b_m_e.png",
+				title: "목적지: " + dest
+			});
+
+			tmapInstance.fitBounds(new window.Tmapv2.LatLngBounds(startPos, endPos));
+
+			renderRouteMapLegend(transitData.segments);
+			(transitData.segments || []).forEach(segment => {
+				const path = (segment.geometry || [])
+					.map(point => new window.Tmapv2.LatLng(Number(point.lat), Number(point.lng)));
+				if (path.length < 2) return;
+				const line = new window.Tmapv2.Polyline({
+					path,
+					strokeColor: getTransitColor(segment),
+					strokeWeight: segment.mode === "WALK" ? 4 : 7,
+					strokeOpacity: segment.mode === "WALK" ? 0.7 : 0.9,
+					strokeStyle: segment.mode === "WALK" ? "dash" : "solid",
+					map: tmapInstance
+				});
+				routeLines.push(line);
+			});
+			if (routeLines.length === 0) drawFallbackLine(startPos, endPos);
+		}
+
+		function calculateBestCarToSit(congestionArray, seatProbArray) {
+			let maxProbability = -1;
+			let bestCarNumber = 1;
+
+			congestionArray.forEach((congestion, index) => {
+				let computedProb = Math.max(0, 100 - congestion);
+
+				if (seatProbArray && seatProbArray[index]) {
+					computedProb = (computedProb + seatProbArray[index]) / 2;
+				}
+
+				if (computedProb > maxProbability) {
+					maxProbability = computedProb;
+					bestCarNumber = index + 1;
+				}
+			});
+
+			return {
+				car: bestCarNumber,
+				prob: Math.round(maxProbability)
+			};
+		}
+
+		function resetSearch() {
+			document.getElementById('resultBlock').classList.remove('show');
+			closeDetail();
+		}
+		function openDetail() {
+			document.getElementById('detailPanel').classList.add('active');
+		}
+		function closeDetail() {
+			document.getElementById('detailPanel').classList.remove('active');
+		}
+
+		/* ================= 7. TMAP 지도 및 기타 유틸 ================= */
+		var tmapInstance = null;
+		var markerStart = null;
+		var markerEnd = null;
+		var routeLine = null;
+		var routeLines = [];
+
+		function clearRouteLines() {
+			if (routeLine) {
+				routeLine.setMap(null);
+				routeLine = null;
+			}
+			routeLines.forEach(line => line.setMap(null));
+			routeLines = [];
+		}
+
+		function initTmap() {
+			try {
+				if (!window.Tmapv2) throw new Error('TMAP SDK 로드 실패');
+				document.getElementById('tmapDiv').classList.add('ready');
+				tmapInstance = new Tmapv2.Map('tmapDiv', {center: new Tmapv2.LatLng(37.5665, 126.9780), width: '100%', height: '100%', zoom: 13, zoomControl: false});
+				document.getElementById('mapMockLayer').classList.add('hide');
+
+				setTimeout(() => {
+					if (tmapInstance) tmapInstance.resize();
+				}, 500);
+			} catch (e) {console.error(e);}
+		}
+
+		function handleTmapScriptError() {
+			showApiStatus('TMAP 지도 스크립트를 불러오지 못했어요. appKey 또는 네트워크 연결 상태를 확인해주세요.');
+		}
+
+		function showApiStatus(msg) {
+			var el = document.getElementById('apiStatus');
+			el.innerHTML = msg;
+			el.classList.add('show');
+		}
+
+		setTimeout(function () {
+			if (!window.Tmapv2 || !tmapInstance) {
+				if (!document.getElementById('apiStatus').classList.contains('show')) {
+					showApiStatus('TMAP 지도가 아직 연결되지 않았어요. 발급받은 appKey로 교체 후 localhost 서버 환경에서 확인해주세요.');
+				}
+			}
+		}, 3500);
+
+		var mockZoomLevel = 1;
+		function zoomMap(delta) {
+			if (tmapInstance) {
+				tmapInstance.setZoom(tmapInstance.getZoom() + delta);
+				return;
+			}
+			mockZoomLevel = Math.min(2, Math.max(0.6, mockZoomLevel + (delta > 0 ? 0.15 : -0.15)));
+			document.getElementById('mapMockLayer').style.transform = 'scale(' + mockZoomLevel + ')';
+		}
+
+		function fetchWeather(lat, lon) {
+			fetch(`/api/weather?lat=${lat}&lon=${lon}`)
+				.then(res => res.json())
+				.then(data => {
+					document.getElementById('weatherTemp').textContent = data.temperature;
+					document.getElementById('weatherDesc').textContent = data.summary;
+				});
+		}
+
+		var nearbyStopsVisible = false;
+		function toggleNearbyStops() {
+			nearbyStopsVisible = !nearbyStopsVisible;
+			var layer = document.getElementById('nearbyStopsLayer');
+			var svg = document.getElementById('stopsSvg');
+			var btn = document.getElementById('nearbyStopsBtn');
+
+			if (nearbyStopsVisible) {
+				navigator.geolocation.getCurrentPosition(pos => {
+					const lat = pos.coords.latitude;
+					const lng = pos.coords.longitude;
+
+					fetch(`/api/nearby-bus?lat=${lat}&lng=${lng}`)
+						.then(res => res.json())
+						.then(data => {
+							svg.innerHTML = '';
+							data.forEach(stop => {
+								const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+								g.innerHTML = `<circle r="9" fill="#4C5FD5" /><text x="14" y="4" font-size="13" font-weight="700" fill="#1B1F3B">${stop.name}</text>`;
+								g.setAttribute("transform", `translate(${stop.x}, ${stop.y})`);
+								svg.appendChild(g);
+							});
+						});
+				});
+				layer.classList.add('show');
+				btn.classList.add('active');
+			} else {
+				layer.classList.remove('show');
+				btn.classList.remove('active');
+			}
+		}
+
+		function closeDisasterBanner() {
+			document.getElementById('disasterBanner').style.display = 'none';
+		}
+
+		function formatDateYMD(d) {
+			var yyyy = d.getFullYear();
+			var mm = String(d.getMonth() + 1).padStart(2, '0');
+			var dd = String(d.getDate()).padStart(2, '0');
+			return yyyy + '-' + mm + '-' + dd;
+		}
+		function formatTimeHM(d) {
+			var hh = String(d.getHours()).padStart(2, '0');
+			var mm = String(d.getMinutes()).padStart(2, '0');
+			return hh + ':' + mm;
+		}
+
+		function updateDatetimePillText() {
+			var dateInput = document.getElementById('tripDate');
+			var timeInput = document.getElementById('tripTime');
+			var pillText = document.getElementById('datetimePillText');
+			if (!dateInput.value || !timeInput.value) return;
+
+			var parts = dateInput.value.split('-').map(Number);
+			var d = new Date(parts[0], parts[1] - 1, parts[2]);
+			var days = ['일', '월', '화', '수', '목', '금', '토'];
+			var mm = String(parts[1]).padStart(2, '0');
+			var dd = parts[2];
+
+			var tparts = timeInput.value.split(':');
+			var hh = tparts[0];
+			var min = tparts[1];
+			var ampm = parseInt(hh, 10) < 12 ? '오전' : '오후';
+
+			var isArrival = document.getElementById('modeArrival').classList.contains('active');
+			var suffix = isArrival ? '도착' : '출발';
+
+			pillText.textContent = mm + '월 ' + dd + '일 (' + days[d.getDay()] + ') ' + ampm + ' ' + hh + ':' + min + ' ' + suffix;
+		}
+
+		function validateTripDateTime() {
+			var dateInput = document.getElementById('tripDate');
+			var timeInput = document.getElementById('tripTime');
+			var now = new Date();
+			var todayStr = formatDateYMD(now);
+			var maxDate = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+			var maxStr = formatDateYMD(maxDate);
+
+			if (dateInput.value < todayStr) {
+				dateInput.value = todayStr;
+			} else if (dateInput.value > maxStr) {
+				dateInput.value = maxStr;
+			}
+
+			if (dateInput.value === todayStr && timeInput.value < formatTimeHM(now)) {
+				timeInput.value = formatTimeHM(now);
+			}
+
+			updateDatetimePillText();
+		}
+
+		function locateMe() {
+			if (!navigator.geolocation) {
+				alert("이 브라우저에서는 위치 정보(GPS)를 지원하지 않습니다.");
+				return;
+			}
+
+			navigator.geolocation.getCurrentPosition(pos => {
+				const lat = pos.coords.latitude;
+				const lon = pos.coords.longitude;
+
+				if (tmapInstance) {
+					const myPos = new Tmapv2.LatLng(lat, lon);
+					tmapInstance.setCenter(myPos);
+					tmapInstance.setZoom(15);
+
+					if (myLocationMarker) {
+						myLocationMarker.setMap(null);
+					}
+
+					myLocationMarker = new Tmapv2.Marker({
+						position: myPos,
+						map: tmapInstance,
+						title: '내 위치'
+					});
+				}
+
+				fetchWeather(lat, lon);
+
+			}, err => {
+				alert("위치 정보 권한 동의가 필요하거나 현재 GPS 신호를 잡을 수 없습니다.");
+			}, {
+				enableHighAccuracy: true,
+				timeout: 5000
+			});
+		}
+
+		function updateCongestionInfo(stationName, targetRoot) {
+			fetch(`/api/congestion?station=${encodeURIComponent(stationName || '강남역')}`)
+				.then(res => res.json())
+				.then(data => {
+					const root = targetRoot || document;
+					const bars = root.querySelectorAll('.car-bar');
+					const probs = root.querySelectorAll('.prob-text');
+
+					if (data.congestion) {
+						data.congestion.forEach((c, i) => {
+							if (bars[i]) {
+								let color = c < 40 ? '#3DDC97' : (c < 70 ? '#FFB627' : '#D6304A');
+								bars[i].style.backgroundColor = color;
+							}
+							if (probs[i] && data.seatProb) {
+								probs[i].textContent = data.seatProb[i] + '%';
+							}
+						});
+
+						const bestSelection = calculateBestCarToSit(data.congestion, data.seatProb);
+
+						const leftSitProbBox = document.querySelector('.stat-box:nth-child(1) .v');
+						if (leftSitProbBox) leftSitProbBox.textContent = bestSelection.prob + "%";
+
+						const rightSeatProbLabel = document.getElementById('detailSeatProb');
+						if (rightSeatProbLabel) {
+							rightSeatProbLabel.textContent = bestSelection.prob + "%";
+						}
+
+						const noteElement = root.querySelector('.car-dir-note');
+						if (noteElement) {
+							noteElement.innerHTML = `
+		                        진입 열차 칸별 혼잡도 · 앞쪽(1호차) → 뒤쪽(8호차) 순<br>
+		                        <span style="color: #2D6A6A; font-weight: 800; display: inline-block; margin-top: 6px;">
+		                            💡 분석 결과: 현재 <b>${bestSelection.car}호차</b>에 탑승하시면 의자에 앉아갈 확률이 <b>${bestSelection.prob}%</b>로 가장 높습니다!
+		                        </span>
+		                    `;
+						}
+					}
+				})
+				.catch(err => console.error("혼잡도 수신 실패:", err));
+		}
+
+		async function loadPurposePolicies() {
+			try {
+				const response = await fetch('/api/purposes');
+				if (response.ok) {
+					const purposes = await response.json();
+					const purposeSelect = document.getElementById('purposeSelect');
+					if (purposes && purposes.length > 0) {
+						purposeSelect.innerHTML = '';
+						purposes.forEach(item => {
+							defaultBufferMap[item.purposeCode] = item.defaultBufferMinutes;
+							const opt = document.createElement('option');
+							opt.value = item.purposeCode;
+							opt.textContent = item.purposeName;
+							purposeSelect.appendChild(opt);
+						});
+					}
+				}
+			} catch (e) {
+				console.warn("백엔드 목적 정책 로드 실패, 기본 옵션 유지:", e);
+			} finally {
+				onPurposeChange();
+			}
+		}
+
+		async function loadNotifications() {
+			try {
+				const response = await fetch('/api/notifications');
+				if (!response.ok) return;
+				const notifications = await response.json();
+				console.log("DB 수신 알림 목록:", notifications);
+			} catch (e) {
+				console.error("알림 조회 오류:", e);
+			}
+		}
+
+		/* ================= 8. DOM 초기화 ================= */
+		document.addEventListener('DOMContentLoaded', function () {
+			document.querySelectorAll('input').forEach(input => {
+				input.addEventListener('keypress', e => {if (e.key === 'Enter') runSearch();});
+			});
+
+			const now = new Date();
+
+			document.getElementById('tripDate').value = formatDateYMD(now);
+			document.getElementById('tripTime').value = formatTimeHM(now);
+
+			calState.year = now.getFullYear();
+			calState.month = now.getMonth();
+			calState.day = now.getDate();
+			calState.hour = now.getHours() % 12 === 0 ? 12 : now.getHours() % 12;
+			calState.minute = now.getMinutes();
+			calState.ampm = now.getHours() < 12 ? 'AM' : 'PM';
+
+			updateDatetimePillText();
+			loadPurposePolicies();
+		});
+
+		window.addEventListener('load', initTmap);
+		window.addEventListener('resize', () => {if (tmapInstance) tmapInstance.resize();});
+
+		/* 실제 DB 연동 로그인/회원가입 함수 */
+		async function doLogin() {
+			var email = document.getElementById('loginEmail').value.trim();
+			var pwd = document.getElementById('loginPwd').value;
+
+			if (!email) {alert('이메일을 입력하세요.'); return;}
+			if (!pwd) {alert('비밀번호를 입력하세요.'); return;}
+
+			try {
+				const response = await fetch('/api/users/login', {
+					method: 'POST',
+					headers: {'Content-Type': 'application/json'},
+					body: JSON.stringify({email: email, password: pwd})
+				});
+
+				const result = await response.json();
+
+				if (result.success) {
+					alert(result.message);
+					applyAccountInfo(result.user.email, result.user.nickname);
+					showAccountView('info');
+				} else {
+					alert(result.message);
+				}
+			} catch (e) {
+				alert("로그인 통신 중 오류가 발생했습니다.");
+			}
+		}
+
+		async function doSignup() {
+			var email = document.getElementById('signupEmail').value.trim();
+			var pwd = document.getElementById('signupPwd').value;
+			var pwdCheck = document.getElementById('signupPwdCheck').value;
+			var nickname = document.getElementById('signupNickname').value.trim();
+
+			if (!email) {alert('이메일을 입력하세요.'); return;}
+			if (!pwd) {alert('비밀번호를 입력하세요.'); return;}
+			if (pwd !== pwdCheck) {alert('비밀번호가 일치하지 않습니다.'); return;}
+			if (!nickname) {alert('닉네임을 입력해주세요.'); return;}
+
+			try {
+				const response = await fetch('/api/users/signup', {
+					method: 'POST',
+					headers: {'Content-Type': 'application/json'},
+					body: JSON.stringify({
+						email: email,
+						password: pwd,
+						nickname: nickname
+					})
+				});
+
+				const result = await response.json();
+				alert(result.message);
+
+				if (result.success) {
+					showAccountView('login');
+				}
+			} catch (e) {
+				alert("회원가입 통신 중 오류가 발생했습니다.");
+			}
+		}
+
+		function doLogout() {
+			document.getElementById('loginEmail').value = '';
+			document.getElementById('loginPwd').value = '';
+			document.getElementById('signupEmail').value = '';
+			document.getElementById('signupPwd').value = '';
+			document.getElementById('signupPwdCheck').value = '';
+			document.getElementById('signupNickname').value = '';
+			showAccountView('login');
+		}
+		// 1. ODsay 대중교통 경로 정보 요청
+		async function fetchOdsayRoute(startX, startY, endX, endY) {
+			try {
+				const url = `/api/odsay/route?startX=${startX}&startY=${startY}&endX=${endX}&endY=${endY}`;
+				const response = await fetch(url);
+				const data = await response.json();
+
+				if (data.result && data.result.path && data.result.path.length > 0) {
+					const bestPath = data.result.path[0];
+					if (bestPath.info && bestPath.info.mapObj) {
+						fetchOdsayPathGraphic(bestPath.info.mapObj, startX, startY, endX, endY);
+					} else {
+						drawFallbackLine(startX, startY, endX, endY);
+					}
+				} else {
+					drawFallbackLine(startX, startY, endX, endY);
+				}
+			} catch (error) {
+				console.error("ODsay 프록시 통신 실패:", error);
+				drawFallbackLine(startX, startY, endX, endY);
+			}
+		}
+
+		// 2. TMAP 지도 위에 세부 구비 구간(Polyline) 렌더링
+		async function fetchOdsayPathGraphic(mapObj, startX, startY, endX, endY) {
+			try {
+				const url = `/api/odsay/lane?mapObject=${encodeURIComponent(mapObj)}`;
+				const response = await fetch(url);
+				const data = await response.json();
+
+				if (!data.result || !data.result.lane) {
+					drawFallbackLine(startX, startY, endX, endY);
+					return;
+				}
+
+				let linePath = [];
+
+				data.result.lane.forEach(lane => {
+					lane.section.forEach(section => {
+						section.graphPos.forEach(pos => {
+							linePath.push(new window.Tmapv2.LatLng(pos.y, pos.x));
+						});
+					});
+				});
+
+				if (linePath.length === 0) {
+					drawFallbackLine(startX, startY, endX, endY);
+					return;
+				}
+
+				if (typeof routeLine !== 'undefined' && routeLine) {
+					routeLine.setMap(null);
+				}
+
+				// 🌟 TMAP 지도 위에 실제 파란색 대중교통 노선(곡선) 렌더링
+				routeLine = new window.Tmapv2.Polyline({
+					path: linePath,
+					strokeColor: "#3B82F6",
+					strokeWeight: 6,
+					strokeOpacity: 0.85,
+					map: tmapInstance
+				});
+
+			} catch (error) {
+				console.error("궤적 그리기 예외:", error);
+				drawFallbackLine(startX, startY, endX, endY);
+			}
+		}
+
+		// 예외 발생 시 보여줄 예비 직선
+		function drawFallbackLine(startPos, endPos) {
+			clearRouteLines();
+			routeLine = new window.Tmapv2.Polyline({
+				path: [startPos, endPos],
+				strokeColor: "#FF6B57",
+				strokeWeight: 4,
+				strokeOpacity: 0.5,
+				map: tmapInstance
+			});
+		}
+	</script>
+	<script
+		src="https://apis.openapi.sk.com/tmap/jsv2?version=1&format=javascript&appKey=M3NNT78vK82uK7Mekk3hF3b1rfeZ1TZIaOVS9JGX"
+		onerror="handleTmapScriptError()"></script>
+
+</body>
+
+</html>

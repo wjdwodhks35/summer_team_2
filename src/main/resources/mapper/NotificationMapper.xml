@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.todaydeparture.mapper.NotificationMapper">
+
+    <select id="findAll" resultType="com.example.todaydeparture.dto.NotificationDto">
+        SELECT
+            id,
+            user_id,
+            room_id,
+            room_member_id,
+            trip_result_id,
+            notification_type,
+            notification_channel,
+            title,
+            message,
+            scheduled_at,
+            sent_at,
+            read_at,
+            is_read,
+            created_at
+        FROM notifications
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findById" resultType="com.example.todaydeparture.dto.NotificationDto">
+        SELECT
+            id,
+            user_id,
+            room_id,
+            room_member_id,
+            trip_result_id,
+            notification_type,
+            notification_channel,
+            title,
+            message,
+            scheduled_at,
+            sent_at,
+            read_at,
+            is_read,
+            created_at
+        FROM notifications
+        WHERE id = #{notificationId}
+    </select>
+
+    <update id="markAsRead">
+        UPDATE notifications
+        SET
+            is_read = 1,
+            read_at = NOW()
+        WHERE id = #{notificationId}
+    </update>
+
+</mapper>

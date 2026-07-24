@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.todaydeparture.mapper.DepartureMapper">
+
+    <select id="findPurposeBufferMinutes" resultType="int">
+        SELECT default_buffer_minutes
+        FROM purpose_buffer_policies
+        WHERE purpose_code = #{purposeCode}
+          AND is_active = 1
+    </select>
+
+    <insert id="insertTripRequest"
+            parameterType="com.example.todaydeparture.dto.TripRequestInsertDto"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO trip_requests (
+            user_id,
+            start_name,
+            start_address,
+            start_latitude,
+            start_longitude,
+            destination_name,
+            destination_address,
+            destination_latitude,
+            destination_longitude,
+            target_type,
+            target_datetime,
+            purpose_code,
+            preferred_transport,
+            base_travel_minutes,
+            personal_buffer_minutes,
+            request_client,
+            request_status
+        )
+        VALUES (
+            #{userId},
+            #{startName},
+            #{startAddress},
+            #{startLatitude},
+            #{startLongitude},
+            #{destinationName},
+            #{destinationAddress},
+            #{destinationLatitude},
+            #{destinationLongitude},
+            #{targetType},
+            #{targetDatetime},
+            #{purposeCode},
+            #{preferredTransport},
+            #{baseTravelMinutes},
+            #{personalBufferMinutes},
+            #{requestClient},
+            #{requestStatus}
+        )
+    </insert>
+
+    <insert id="insertTripResult"
+            parameterType="com.example.todaydeparture.dto.TripResultInsertDto"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO trip_results (
+            trip_request_id,
+            recommended_departure_time,
+            expected_arrival_time,
+            base_travel_minutes,
+            purpose_buffer_minutes,
+            personal_buffer_minutes,
+            total_buffer_minutes,
+            recommended_transport,
+            risk_score,
+            risk_level,
+            recommendation_summary
+        )
+        VALUES (
+            #{tripRequestId},
+            #{recommendedDepartureTime},
+            #{expectedArrivalTime},
+            #{baseTravelMinutes},
+            #{purposeBufferMinutes},
+            #{personalBufferMinutes},
+            #{totalBufferMinutes},
+            #{recommendedTransport},
+            #{riskScore},
+            #{riskLevel},
+            #{recommendationSummary}
+        )
+    </insert>
+
+    <insert id="insertNotification">
+        INSERT INTO notifications (
+            user_id,
+            trip_result_id,
+            notification_type,
+            title,
+            message,
+            scheduled_at
+        )
+        VALUES (
+            #{userId},
+            #{tripResultId},
+            #{notificationType},
+            #{title},
+            #{message},
+            #{scheduledAt}
+        )
+    </insert>
+
+    <select id="findResultById" resultType="com.example.todaydeparture.dto.DepartureResultDetailDto">
+        SELECT
+            tr.id AS trip_request_id,
+            result.id AS trip_result_id,
+
+            tr.start_name,
+            tr.start_address,
+            tr.destination_name,
+            tr.destination_address,
+
+            tr.purpose_code,
+            tr.target_datetime,
+
+            result.recommended_departure_time,
+            result.expected_arrival_time,
+
+            result.base_travel_minutes,
+            result.purpose_buffer_minutes,
+            result.personal_buffer_minutes,
+            result.total_buffer_minutes,
+
+            result.risk_level,
+            result.recommendation_summary
+        FROM trip_results result
+        JOIN trip_requests tr
+            ON result.trip_request_id = tr.id
+        WHERE result.id = #{tripResultId}
+    </select>
+
+</mapper>
